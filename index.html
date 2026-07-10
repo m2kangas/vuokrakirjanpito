@@ -52,11 +52,11 @@ const EXPENSE_CATEGORIES = [
   },
   {
     id: "perusparannus", fi: "Perusparannus", en: "Improvement or renovation", section: "capitalized",
-    note: "Not deductible in the year paid. Use this when the work raises the apartment above its original standard. Capitalized into your acquisition cost, or depreciated gradually. Confirm the right treatment with Vero or your accountant, then log the yearly deductible portion, if any, under Perusparannuksen poisto.",
+    note: "Not deductible in the year paid. Use this when the work raises the apartment above its original standard. Default rule is straight line depreciation over 10 years, 10 percent per year, logged under Perusparannuksen poisto, or you can instead add the full amount to your acquisition cost at sale, not both. Confirm with Vero or your accountant if your situation differs.",
   },
   {
     id: "perusparannuksen_poisto", fi: "Perusparannuksen poisto", en: "Depreciation of improvement costs", section: "deductible",
-    note: "Enter the portion of a past improvement cost that you, Vero, or your accountant has determined is deductible this year.",
+    note: "The standard method is 10 percent of the original improvement cost per year for 10 years. Enter this year's 10 percent instalment here.",
   },
   {
     id: "huoltopalvelut", fi: "Huolto- ja siivouspalvelut", en: "Maintenance and cleaning services", section: "deductible",
@@ -73,11 +73,11 @@ const EXPENSE_CATEGORIES = [
   { id: "vakuutus", fi: "Vakuutus", en: "Insurance", section: "deductible", note: "Deductible." },
   {
     id: "kiinteistovero", fi: "Kiinteistovero", en: "Real estate tax", section: "deductible",
-    note: "Deductible when you pay it directly, relevant mainly for a directly owned rental property.",
+    note: "Deductible when you pay it directly, relevant mainly for a directly owned rental property. Not normally paid separately for a housing company apartment, that is already inside the hoitovastike.",
   },
   {
     id: "hallintokulut", fi: "Hallintokulut", en: "Administration costs", section: "deductible",
-    note: "Deductible, for example bookkeeping or help preparing the rental income report.",
+    note: "Deductible, for example bookkeeping, help preparing the rental income report, or a credit check on a prospective tenant.",
   },
   {
     id: "matkakulut", fi: "Matkakulut", en: "Travel costs", section: "deductible",
@@ -99,7 +99,11 @@ const EXPENSE_CATEGORIES = [
   },
   {
     id: "irtaimisto_poisto", fi: "Irtaimiston poisto", en: "Depreciation of movables", section: "deductible",
-    note: "Typically 25% per year on the remaining balance.",
+    note: "Typically 25% per year on the remaining balance. Use this if you deduct the actual cost of furniture and appliances you bought for the apartment.",
+  },
+  {
+    id: "kalustevahennys", fi: "Kalustevahennys, kaavamainen", en: "Furnished apartment standard deduction", section: "deductible",
+    note: "A flat monthly amount Vero sets each year for a furnished apartment, as an alternative to tracking actual furniture and appliance costs. Use either this or Irtaimiston poisto for a given apartment and year, not both. Check the current euro amount on Vero's site before using this.",
   },
   { id: "muu_kulu", fi: "Muu kulu", en: "Other cost", section: "deductible", note: "Deductible if it relates to the rental activity." },
 ];
