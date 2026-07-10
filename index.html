@@ -603,6 +603,61 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
   );
 }
 
+/* ---------- Settings, non-destructive credential and folder updates ---------- */
+function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOut, onResetEverything }) {
+  const [clientId, setClientId] = useState(config.clientId || "");
+  const [apiKey, setApiKey] = useState(config.apiKey || "");
+  const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey || "");
+  const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
+  const [saved, setSaved] = useState(false);
+
+  function save() {
+    onSave({
+      clientId: clientId.trim(), apiKey: apiKey.trim(),
+      geminiApiKey: geminiApiKey.trim(), allowedEmail: allowedEmail.trim(),
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <Modal onClose={onClose} title="Settings">
+      <Field label="Google OAuth Client ID">
+        <input className={inputCls} style={inputStyle} value={clientId} onChange={(e) => setClientId(e.target.value)} />
+      </Field>
+      <Field label="Google API key (Drive and Picker)">
+        <input className={inputCls} style={inputStyle} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+      </Field>
+      <Field label="Gemini API key (Auth key from Google AI Studio), optional">
+        <input className={inputCls} style={inputStyle} value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} />
+      </Field>
+      <Field label="Your Google account email">
+        <input className={inputCls} style={inputStyle} value={allowedEmail} onChange={(e) => setAllowedEmail(e.target.value)} />
+      </Field>
+      <button onClick={save} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
+        {saved ? "Saved" : "Save changes"}
+      </button>
+      <div className="text-xs mt-1" style={{ color: MUTE }}>
+        If you changed the Client ID or Google API key, click Reconnect Google in the header afterward.
+      </div>
+
+      <div className="mt-4 pt-4 border-t" style={{ borderColor: LINE }}>
+        <div className="text-xs mb-2" style={{ color: MUTE }}>Current Drive folder: {folder?.name || "none"}</div>
+        <button onClick={onPickFolder} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
+          Change Drive folder
+        </button>
+        <button onClick={onSignOut} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
+          Sign out of Google
+        </button>
+        <button onClick={() => { if (confirm("This clears all saved credentials and the folder link on this device. Your data in Drive is not deleted. Continue?")) onResetEverything(); }}
+          className="w-full py-2 rounded text-sm" style={{ color: RUST }}>
+          Reset everything on this device
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 /* ---------- Apartment form ---------- */
 function ApartmentFormModal({ initial, onClose, onSave }) {
   const [form, setForm] = useState(
@@ -1136,6 +1191,7 @@ function App() {
   const tokenClientReadyRef = useRef(false);
 
   useEffect(() => {
+    tokenClientReadyRef.current = false;
     const t = setInterval(() => {
       if (window.google && window.google.accounts && config.clientId && !tokenClientReadyRef.current) {
         initTokenClient(config.clientId, onTokenGranted);
@@ -1171,6 +1227,42 @@ function App() {
     if (!tokenClientReadyRef.current) return;
     setError("");
     requestToken(true);
+  }
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  function pickFolderFromSettings() {
+    if (!window.gapi || !currentToken) { setError("Connect Google Drive first, then change the folder."); return; }
+    window.gapi.load("picker", () => {
+      const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS).setSelectFolderEnabled(true).setIncludeFolders(true);
+      const picker = new google.picker.PickerBuilder()
+        .addView(view).setOAuthToken(currentToken.access_token).setDeveloperKey(config.apiKey)
+        .setCallback((data) => {
+          if (data.action === google.picker.Action.PICKED) {
+            const doc = data.docs[0];
+            const f = { id: doc.id, name: doc.name };
+            setFolder(f);
+            setConfig(saveConfig({ folderId: f.id, folderName: f.name }));
+            setShowSettingsModal(false);
+            setReady(false);
+            loadData(f.id);
+          }
+        }).build();
+      picker.setVisible(true);
+    });
+  }
+
+  function signOutGoogle() {
+    currentToken = null;
+    localStorage.removeItem("vkp_token");
+    setSignedIn(false);
+    setShowSettingsModal(false);
+  }
+
+  function resetEverything() {
+    localStorage.removeItem("vkp_config");
+    localStorage.removeItem("vkp_token");
+    window.location.reload();
   }
 
   async function loadData(folderId) {
@@ -1329,6 +1421,9 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowSettingsModal(true)} className="px-2 py-1 rounded text-xs border" style={{ borderColor: LINE, color: MUTE }}>
+              Settings
+            </button>
             <button onClick={reconnect} className="px-2 py-1 rounded text-xs border" style={{ borderColor: LINE, color: MUTE }}>
               Reconnect Google
             </button>
@@ -1375,6 +1470,11 @@ function App() {
       {showRecurringModal && (
         <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
           onUpdate={updateRecurringTemplate} onDelete={deleteRecurringTemplate} />
+      )}
+      {showSettingsModal && (
+        <SettingsModal config={config} folder={folder} onClose={() => setShowSettingsModal(false)}
+          onSave={(patch) => setConfig(saveConfig(patch))} onPickFolder={pickFolderFromSettings}
+          onSignOut={signOutGoogle} onResetEverything={resetEverything} />
       )}
     </div>
   );
