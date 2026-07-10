@@ -149,7 +149,7 @@ const eur = (n) => (n || 0).toLocaleString("fi-FI", { style: "currency", currenc
 const dateFmt = (iso) => new Date(iso).toLocaleDateString("fi-FI", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 /* ---------- Google auth + Drive + Sheets ---------- */
-const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
 const DRIVE = "https://www.googleapis.com/drive/v3";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
 const SHEETS = "https://sheets.googleapis.com/v4/spreadsheets";
