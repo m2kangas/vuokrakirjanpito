@@ -1215,7 +1215,7 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
   );
 }
 
-function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxApartmentId, sheetUrl, filerName }) {
+function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxApartmentId, setTaxApartmentId, sheetUrl, filerName }) {
   const relevantApartments = taxApartmentId === "all" ? apartments : apartments.filter((a) => a.id === taxApartmentId);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState("");
@@ -1223,6 +1223,13 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
   function computeFor(apartmentId) {
     const apartment = apartments.find((a) => a.id === apartmentId);
     return computeApartmentYear(apartment, transactions, year);
+  }
+
+  function computeProjectedFor(apartmentId) {
+    const apartment = apartments.find((a) => a.id === apartmentId);
+    const projected = projectedTransactionsForYear(recurringTemplates || [], transactions, year);
+    const merged = [...transactions, ...projected];
+    return computeApartmentYear(apartment, merged, year);
   }
 
   async function downloadPdf() {
@@ -1286,6 +1293,7 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
       <div className="space-y-6">
         {relevantApartments.map((a) => {
           const r = computeFor(a.id);
+          const pr = computeProjectedFor(a.id);
           const share = (a.sharePercent ?? 100) / 100;
           return (
             <div key={a.id} className="rounded border overflow-hidden" style={{ borderColor: LINE, background: CARD }}>
@@ -1321,6 +1329,20 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
                     {r.interestCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
                     <RowLine label="Total loan interest" value={r.interestTotal} negative bold />
                     <RowLine label={`Your taxable share of the interest, ${a.sharePercent ?? 100}%`} value={r.interestTotal * share} negative />
+                  </div>
+                )}
+
+                {(pr.incomeTotal !== r.incomeTotal || pr.expenseTotal !== r.expenseTotal) && (
+                  <div className="mt-4 pt-3 border-t-2" style={{ borderColor: TEAL, background: "#EFF5F7" }}>
+                    <div className="px-3 py-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: TEAL }}>
+                        Projected full year, includes planned recurring, not for filing
+                      </div>
+                      <RowLine label="Projected total rental income" value={pr.incomeTotal} />
+                      <RowLine label="Projected total deductible costs" value={pr.expenseTotal} negative />
+                      <RowLine label="Projected net rental result, 100%" value={pr.net} bold />
+                      <RowLine label={`Projected taxable share, ${a.sharePercent ?? 100}%`} value={pr.net * share} bold accent />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1654,7 +1676,7 @@ function App() {
             onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} />
         )}
         {tab === "tax" && (
-          <TaxReportTab apartments={apartments} transactions={transactions} year={year} taxApartmentId={taxApartmentId}
+          <TaxReportTab apartments={apartments} transactions={transactions} recurringTemplates={recurringTemplates} year={year} taxApartmentId={taxApartmentId}
             setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} filerName={config.filerName} />
         )}
       </main>
