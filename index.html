@@ -1071,7 +1071,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 <script>
   var __src = document.getElementById("app-source").textContent;
-  var __out = Babel.transform(__src, { presets: ["react"], filename: "app.jsx", sourceType: "script" }).code;
+  var __out = Babel.transform(__src, { presets: [["react", { runtime: "classic" }]], filename: "app.jsx", sourceType: "script" }).code;
   (0, eval)(__out);
 </script>
 </body>
