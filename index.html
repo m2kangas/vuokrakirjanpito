@@ -669,7 +669,7 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
 }
 
 /* ---------- Transaction form ---------- */
-function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onClose, onSave }) {
+function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, onClose, onSave }) {
   const [form, setForm] = useState({
     apartmentId: defaultApartmentId || apartments[0]?.id,
     type: "income", category: "rent", date: new Date().toISOString().slice(0, 10), amount: "", description: "",
@@ -680,6 +680,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [geminiKeyInput, setGeminiKeyInput] = useState("");
 
   const categories = form.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const activeCat = ALL_CATEGORIES.find((c) => c.id === form.category);
@@ -756,6 +757,20 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
           </button>
           {scanError && <div className="text-xs mt-1" style={{ color: RUST }}>{scanError}</div>}
           <div className="text-xs mt-1" style={{ color: MUTE }}>Review the filled-in fields below before saving, it's a best guess.</div>
+        </div>
+      )}
+      {receiptFile && !geminiApiKey && (
+        <div className="mb-3 px-3 py-2 rounded border" style={{ borderColor: LINE }}>
+          <div className="text-xs mb-2" style={{ color: MUTE }}>
+            Add your Gemini API key once to enable auto-fill from receipts.
+          </div>
+          <input className={inputCls} style={inputStyle} value={geminiKeyInput} placeholder="AIza... (from Google AI Studio)"
+            onChange={(e) => setGeminiKeyInput(e.target.value)} />
+          <button type="button" onClick={() => geminiKeyInput.trim() && onSaveGeminiKey(geminiKeyInput.trim())}
+            disabled={!geminiKeyInput.trim()} className="w-full mt-2 py-1.5 rounded text-xs font-medium disabled:opacity-40"
+            style={{ background: TEAL, color: "#fff" }}>
+            Save Gemini key
+          </button>
         </div>
       )}
 
@@ -1098,6 +1113,9 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
 /* ---------- Main app ---------- */
 function App() {
   const [config, setConfig] = useState(loadConfig());
+  function saveGeminiKey(key) {
+    setConfig(saveConfig({ geminiApiKey: key }));
+  }
   const [ready, setReady] = useState(false); // signed in + folder chosen + data loaded
   const [apartments, setApartments] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -1352,7 +1370,7 @@ function App() {
       {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} />}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
-          geminiApiKey={config.apiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} />
       )}
       {showRecurringModal && (
         <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
