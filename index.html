@@ -10,6 +10,7 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
   body { background:#F6F5F0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 </style>
@@ -340,6 +341,90 @@ async function extractReceiptWithGemini(apiKey, base64, mimeType) {
   return JSON.parse(cleaned);
 }
 
+function computeApartmentYear(apartment, transactions, year) {
+  const rows = transactions.filter((t) => t.apartmentId === apartment.id && new Date(t.date).getFullYear() === year);
+  const byCategory = {};
+  for (const c of ALL_CATEGORIES) byCategory[c.id] = 0;
+  for (const r of rows) byCategory[r.category] += Number(r.amount);
+  const incomeTotal = INCOME_CATEGORIES.reduce((s, c) => s + byCategory[c.id], 0);
+  const deductibleCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "deductible");
+  const capitalizedCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "capitalized");
+  const interestCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "interest");
+  const expenseTotal = deductibleCategories.reduce((s, c) => s + byCategory[c.id], 0);
+  const capitalizedTotal = capitalizedCategories.reduce((s, c) => s + byCategory[c.id], 0);
+  const interestTotal = interestCategories.reduce((s, c) => s + byCategory[c.id], 0);
+  return { byCategory, incomeTotal, expenseTotal, capitalizedTotal, interestTotal, deductibleCategories, capitalizedCategories, interestCategories, net: incomeTotal - expenseTotal };
+}
+
+/* Maps our categories onto the five numbered lines of the actual Vero form 7H (3011), section 2. */
+function get7HLines(apartment, transactions, year) {
+  const r = computeApartmentYear(apartment, transactions, year);
+  const hoitoVesi = r.byCategory.hoitovastike + r.byCategory.vesimaksu;
+  const tuloutetutPaaomavastikkeet =
+    (getCategorySection("rahoitusvastike", apartment) === "deductible" ? r.byCategory.rahoitusvastike : 0) +
+    (getCategorySection("erityisvastike", apartment) === "deductible" ? r.byCategory.erityisvastike : 0);
+  const vuosikorjaus = r.byCategory.korjauskulut;
+  const muutKulut = r.expenseTotal - hoitoVesi - tuloutetutPaaomavastikkeet - vuosikorjaus;
+  return { r, line21: r.incomeTotal, line22: hoitoVesi, line23: tuloutetutPaaomavastikkeet, line24: vuosikorjaus, line25: muutKulut };
+}
+
+const VERO_7H_BLANK_URL = "https://www.vero.fi/contentassets/d1b13e41f36f4e89bafe967dd497d2ed/3011v25_ws.pdf";
+
+async function generate7HSummaryPdf(apartments, transactions, year, filerName) {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const pageSize = [595.28, 841.89];
+  let page = doc.addPage(pageSize);
+  let y = 800;
+  const left = 50;
+  function ensureRoom(min) {
+    if (y < min) { page = doc.addPage(pageSize); y = 800; }
+  }
+  function line(text, opts = {}) {
+    page.drawText(text, { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
+    y -= opts.gap ?? 15;
+  }
+  line("7H VUOKRATULOT - OSAKEHUONEISTOT, yhteenveto", { bold: true, size: 13, gap: 20 });
+  line("Tama on avustava yhteenveto sovelluksesta, ei virallinen skannattava vero.fi-lomake.", { size: 8, gap: 10 });
+  line("Kopioi luvut OmaVeroon tai viralliselle 7H-lomakkeelle (vero.fi/omavero).", { size: 8, gap: 20 });
+  line(`Verovuosi: ${year}`, { size: 11 });
+  line(`Nimi: ${filerName || "________________________________"}`, { size: 11 });
+  line("Henkilotunnus: ________________________ (taydenna itse)", { size: 10, gap: 22 });
+
+  for (const a of apartments) {
+    const lines = get7HLines(a, transactions, year);
+    ensureRoom(190);
+    line(a.name, { bold: true, size: 12, gap: 16 });
+    line(`Asunto- tai kiinteistoosakeyhtion nimi: ${a.housingCompany || "________________________"}`, { size: 9 });
+    line(`Y-tunnus: ${a.companyId || "____________"}      Huoneiston numero: ${a.unitNumber || "______"}`, { size: 9 });
+    line(`Omistusosuutesi asunnosta (%): ${a.sharePercent ?? 100}`, { size: 9, gap: 16 });
+    line(`2.1  Vuokratulojen maara koko vuonna (oma osuus, brutto): ${eur(lines.line21)}`, { size: 9.5 });
+    line(`2.2  Hoitovastikkeet ja vesimaksut (oma osuus): ${eur(lines.line22)}`, { size: 9.5 });
+    line(`2.3  Yhtion tulouttamat paaomavastikkeet (oma osuus): ${eur(lines.line23)}`, { size: 9.5 });
+    line(`2.4  Vuosikorjausten kulut (oma osuus): ${eur(lines.line24)}`, { size: 9.5 });
+    line(`2.5  Muut kulut (oma osuus): ${eur(lines.line25)}`, { size: 9.5, gap: 20 });
+    if (lines.r.capitalizedTotal !== 0) {
+      line(`Ei talla lomakkeella, lisatty hankintamenoon: ${eur(lines.r.capitalizedTotal)}`, { size: 8, gap: 12 });
+    }
+    if (lines.r.interestTotal !== 0) {
+      line(`Lainan korot, oma osuus (ilmoitetaan erikseen tulonhankkimisvelan korkoina): ${eur(lines.r.interestTotal * ((a.sharePercent ?? 100) / 100))}`, { size: 8, gap: 12 });
+    }
+    y -= 6;
+  }
+
+  const bytes = await doc.save();
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `7H_yhteenveto_${year}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+
 async function sheetsCreate(title) {
   const res = await fetch(SHEETS, {
     method: "POST",
@@ -613,12 +698,13 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOu
   const [apiKey, setApiKey] = useState(config.apiKey || "");
   const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey || "");
   const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
+  const [filerName, setFilerName] = useState(config.filerName || "");
   const [saved, setSaved] = useState(false);
 
   function save() {
     onSave({
       clientId: clientId.trim(), apiKey: apiKey.trim(),
-      geminiApiKey: geminiApiKey.trim(), allowedEmail: allowedEmail.trim(),
+      geminiApiKey: geminiApiKey.trim(), allowedEmail: allowedEmail.trim(), filerName: filerName.trim(),
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -637,6 +723,9 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOu
       </Field>
       <Field label="Your Google account email">
         <input className={inputCls} style={inputStyle} value={allowedEmail} onChange={(e) => setAllowedEmail(e.target.value)} />
+      </Field>
+      <Field label="Your name, for the 7H summary PDF, optional">
+        <input className={inputCls} style={inputStyle} value={filerName} onChange={(e) => setFilerName(e.target.value)} />
       </Field>
       <button onClick={save} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
         {saved ? "Saved" : "Save changes"}
@@ -666,7 +755,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOu
 function ApartmentFormModal({ initial, onClose, onSave }) {
   const [form, setForm] = useState(
     initial || {
-      name: "", address: "", housingCompany: "", sharePercent: 50,
+      name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
       rahoitusvastikeTreatment: "income", erityisvastikeDescription: "", erityisvastikeTreatment: "income",
       notes: "",
     }
@@ -687,6 +776,16 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
         <input className={inputCls} style={inputStyle} value={form.housingCompany} placeholder="e.g. As Oy Mannynkerkko"
           onChange={(e) => setForm({ ...form, housingCompany: e.target.value })} />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Housing company Y-tunnus, optional">
+          <input className={inputCls} style={inputStyle} value={form.companyId || ""} placeholder="1234567-8"
+            onChange={(e) => setForm({ ...form, companyId: e.target.value })} />
+        </Field>
+        <Field label="Huoneiston numero, optional">
+          <input className={inputCls} style={inputStyle} value={form.unitNumber || ""} placeholder="e.g. A 4"
+            onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} />
+        </Field>
+      </div>
       <Field label="Your ownership share, percent">
         <input type="number" min="0" max="100" className={inputCls} style={inputStyle} value={form.sharePercent}
           onChange={(e) => setForm({ ...form, sharePercent: e.target.value })} />
@@ -1064,23 +1163,25 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
   );
 }
 
-function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxApartmentId, sheetUrl }) {
+function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxApartmentId, sheetUrl, filerName }) {
   const relevantApartments = taxApartmentId === "all" ? apartments : apartments.filter((a) => a.id === taxApartmentId);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState("");
 
   function computeFor(apartmentId) {
     const apartment = apartments.find((a) => a.id === apartmentId);
-    const rows = transactions.filter((t) => t.apartmentId === apartmentId && new Date(t.date).getFullYear() === year);
-    const byCategory = {};
-    for (const c of ALL_CATEGORIES) byCategory[c.id] = 0;
-    for (const r of rows) byCategory[r.category] += Number(r.amount);
-    const incomeTotal = INCOME_CATEGORIES.reduce((s, c) => s + byCategory[c.id], 0);
-    const deductibleCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "deductible");
-    const capitalizedCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "capitalized");
-    const interestCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "interest");
-    const expenseTotal = deductibleCategories.reduce((s, c) => s + byCategory[c.id], 0);
-    const capitalizedTotal = capitalizedCategories.reduce((s, c) => s + byCategory[c.id], 0);
-    const interestTotal = interestCategories.reduce((s, c) => s + byCategory[c.id], 0);
-    return { byCategory, incomeTotal, expenseTotal, capitalizedTotal, interestTotal, deductibleCategories, capitalizedCategories, interestCategories, net: incomeTotal - expenseTotal };
+    return computeApartmentYear(apartment, transactions, year);
+  }
+
+  async function downloadPdf() {
+    setPdfBusy(true);
+    setPdfError("");
+    try {
+      await generate7HSummaryPdf(relevantApartments, transactions, year, filerName);
+    } catch (e) {
+      setPdfError("Could not create the PDF: " + e.message);
+    }
+    setPdfBusy(false);
   }
 
   function downloadCsv() {
@@ -1104,21 +1205,29 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
 
   return (
     <Section eyebrow={String(year)} title="Tax report" right={
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <select value={taxApartmentId} onChange={(e) => setTaxApartmentId(e.target.value)} className="px-3 py-2 rounded border text-sm" style={{ borderColor: LINE, color: INK }}>
           <option value="all">All apartments, separate</option>
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
         <button onClick={downloadCsv} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Export CSV</button>
+        <button onClick={downloadPdf} disabled={pdfBusy} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-50" style={{ background: TEAL, color: "#fff" }}>
+          {pdfBusy ? "Building PDF..." : "Download 7H summary PDF"}
+        </button>
+        <a href={VERO_7H_BLANK_URL} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>
+          Get blank 7H form
+        </a>
         {sheetUrl && <a href={sheetUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Open Sheet</a>}
       </div>
     }>
+      {pdfError && <div className="mb-3 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>{pdfError}</div>}
       <div className="text-xs mb-5 px-3 py-2 rounded" style={{ background: "#EEF2E9", color: "#4A5C3D" }}>
-        Structured like the Finnish rental income report (vuokratulot, form 7H). Vuosikorjaus is deductible in
-        full, perusparannus is not and gets capitalized or depreciated instead. Loan interest is shown
-        separately, it reduces your total capital income rather than this apartment's rental result, and is
-        not deductible at all if you charge below market rent. This is a starting point for your own filing,
-        not tax advice, confirm the financing fee and erityisvastike treatment with your housing company.
+        Structured like the Finnish rental income report (vuokratulot, form 7H, official form number 3011). Vuosikorjaus
+        is deductible in full, perusparannus is not and gets depreciated over 10 years or capitalized instead. Loan
+        interest is shown separately, it reduces your total capital income rather than this apartment's rental
+        result, and is not deductible at all if you charge below market rent. The PDF summary mirrors the official
+        form's five numbered lines per apartment, hoitovastike and vesimaksu combine into one line there, matching
+        Vero's own layout. This is a starting point for your own filing, not tax advice.
       </div>
       <div className="space-y-6">
         {relevantApartments.map((a) => {
@@ -1484,7 +1593,7 @@ function App() {
         )}
         {tab === "tax" && (
           <TaxReportTab apartments={apartments} transactions={transactions} year={year} taxApartmentId={taxApartmentId}
-            setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} />
+            setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} filerName={config.filerName} />
         )}
       </main>
 
