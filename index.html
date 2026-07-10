@@ -230,6 +230,112 @@ async function driveAddParent(fileId, folderId) {
   await fetch(`${DRIVE}/files/${fileId}?addParents=${folderId}&fields=id`, { method: "PATCH", headers: authHeaders() });
 }
 
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function driveFindFolder(parentId, name) {
+  const q = encodeURIComponent(
+    `'${parentId}' in parents and name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
+  );
+  const res = await fetch(`${DRIVE}/files?q=${q}&fields=files(id,name)`, { headers: authHeaders() });
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+async function driveCreateFolder(parentId, name) {
+  const res = await fetch(`${DRIVE}/files?fields=id`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] }),
+  });
+  return res.json();
+}
+async function findOrCreateFolder(parentId, name) {
+  const existing = await driveFindFolder(parentId, name);
+  if (existing) return existing.id;
+  const created = await driveCreateFolder(parentId, name);
+  return created.id;
+}
+async function driveUploadBinary(folderId, filename, mimeType, arrayBuffer) {
+  const base64 = arrayBufferToBase64(arrayBuffer);
+  const boundary = "vkpboundary2";
+  const metadata = { name: filename, parents: [folderId] };
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64}\r\n--${boundary}--`;
+  const res = await fetch(`${UPLOAD}/files?uploadType=multipart&fields=id,webViewLink`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  return res.json();
+}
+
+/* ---------- recurring transactions ---------- */
+const monthKey = (isoDate) => isoDate.slice(0, 7);
+function addMonths(ym, n) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function daysInMonth(y, m) {
+  return new Date(y, m, 0).getDate();
+}
+function generateDueRecurring(templates, transactions) {
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const newTx = [];
+  for (const t of templates) {
+    if (!t.active) continue;
+    let cursor = t.startMonth;
+    const endMonth = t.endMonth && t.endMonth < currentMonth ? t.endMonth : currentMonth;
+    let guard = 0;
+    while (cursor <= endMonth && guard < 600) {
+      guard++;
+      const already = transactions.some((tx) => tx.recurringId === t.id && monthKey(tx.date) === cursor);
+      if (!already) {
+        const [y, m] = cursor.split("-").map(Number);
+        const day = Math.min(t.dayOfMonth || 1, daysInMonth(y, m));
+        const date = `${cursor}-${String(day).padStart(2, "0")}`;
+        newTx.push({
+          id: uid(), apartmentId: t.apartmentId, type: t.type, category: t.category,
+          date, amount: t.amount, description: t.description || "", recurringId: t.id,
+        });
+      }
+      cursor = addMonths(cursor, 1);
+    }
+  }
+  return newTx;
+}
+
+/* ---------- Gemini receipt extraction ---------- */
+async function extractReceiptWithGemini(apiKey, base64, mimeType) {
+  const categoryList = ALL_CATEGORIES.map((c) => `${c.id}: ${c.fi} / ${c.en}`).join("\n");
+  const prompt =
+    "You are extracting structured data from a rental-property receipt or invoice for a Finnish landlord's bookkeeping app.\n" +
+    "Return ONLY compact JSON, no markdown, no explanation, matching exactly this shape:\n" +
+    '{"type":"income"|"expense","category":"<one id from the list below>","date":"YYYY-MM-DD","amount":<plain number, EUR>,"description":"<short text, vendor or purpose>"}\n' +
+    "Category ids you must choose from:\n" + categoryList + "\n" +
+    'If unsure of category, use "muu_kulu" for costs or "other_income" for income. Amount must be a plain number with no currency symbol.';
+  const body = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }] };
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "Gemini request failed");
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
 async function sheetsCreate(title) {
   const res = await fetch(SHEETS, {
     method: "POST",
@@ -563,17 +669,71 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
 }
 
 /* ---------- Transaction form ---------- */
-function TransactionFormModal({ apartments, defaultApartmentId, onClose, onSave }) {
+function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onClose, onSave }) {
   const [form, setForm] = useState({
     apartmentId: defaultApartmentId || apartments[0]?.id,
     type: "income", category: "rent", date: new Date().toISOString().slice(0, 10), amount: "", description: "",
   });
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [repeatMonthly, setRepeatMonthly] = useState(false);
+  const [repeatEndMonth, setRepeatEndMonth] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const categories = form.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const activeCat = ALL_CATEGORIES.find((c) => c.id === form.category);
   function setType(type) {
     const firstCat = (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0].id;
     setForm({ ...form, type, category: firstCat });
   }
+
+  async function scanReceipt() {
+    if (!receiptFile) return;
+    setScanning(true);
+    setScanError("");
+    try {
+      const buf = await receiptFile.arrayBuffer();
+      const base64 = arrayBufferToBase64(buf);
+      const extracted = await extractReceiptWithGemini(geminiApiKey, base64, receiptFile.type || "application/pdf");
+      const validCategories = extracted.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+      const category = validCategories.find((c) => c.id === extracted.category)
+        ? extracted.category
+        : (extracted.type === "income" ? "other_income" : "muu_kulu");
+      setForm({
+        ...form,
+        type: extracted.type === "income" ? "income" : "expense",
+        category,
+        date: extracted.date || form.date,
+        amount: extracted.amount != null ? String(extracted.amount) : form.amount,
+        description: extracted.description || form.description,
+      });
+    } catch (e) {
+      setScanError("Could not read the receipt: " + e.message);
+    }
+    setScanning(false);
+  }
+
+  async function handleSave() {
+    if (!form.apartmentId || !(Number(form.amount) > 0)) return;
+    setSaving(true);
+    let attachment = {};
+    if (receiptFile) {
+      try {
+        const buf = await receiptFile.arrayBuffer();
+        attachment = { __uploadFile: { name: receiptFile.name, mimeType: receiptFile.type || "application/octet-stream", buffer: buf } };
+      } catch (e) {
+        setScanError("Could not read the file to attach: " + e.message);
+        setSaving(false);
+        return;
+      }
+    }
+    onSave(
+      { ...form, amount: Number(form.amount), ...attachment },
+      repeatMonthly ? { dayOfMonth: Number(form.date.slice(8, 10)), startMonth: form.date.slice(0, 7), endMonth: repeatEndMonth || null } : null
+    );
+  }
+
   return (
     <Modal onClose={onClose} title="Add transaction">
       <Field label="Apartment">
@@ -582,6 +742,23 @@ function TransactionFormModal({ apartments, defaultApartmentId, onClose, onSave 
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
+
+      <Field label="Receipt or invoice, optional (image or PDF)">
+        <input type="file" accept="image/*,application/pdf" className={inputCls} style={inputStyle}
+          onChange={(e) => { setReceiptFile(e.target.files[0] || null); setScanError(""); }} />
+      </Field>
+      {receiptFile && geminiApiKey && (
+        <div className="mb-3">
+          <button onClick={scanReceipt} disabled={scanning} type="button"
+            className="w-full py-2 rounded text-sm font-medium border disabled:opacity-50"
+            style={{ borderColor: TEAL, color: TEAL }}>
+            {scanning ? "Reading receipt..." : "Fill from receipt with Gemini"}
+          </button>
+          {scanError && <div className="text-xs mt-1" style={{ color: RUST }}>{scanError}</div>}
+          <div className="text-xs mt-1" style={{ color: MUTE }}>Review the filled-in fields below before saving, it's a best guess.</div>
+        </div>
+      )}
+
       <div className="flex gap-2 mb-3">
         <button onClick={() => setType("income")} className="flex-1 py-2 rounded text-sm font-medium border"
           style={{ background: form.type === "income" ? GREEN : "transparent", color: form.type === "income" ? "#fff" : INK, borderColor: form.type === "income" ? GREEN : LINE }}>
@@ -615,12 +792,60 @@ function TransactionFormModal({ apartments, defaultApartmentId, onClose, onSave 
         <input className={inputCls} style={inputStyle} value={form.description}
           placeholder="e.g. June rent, tenant Matti" onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </Field>
-      <button
-        onClick={() => form.apartmentId && Number(form.amount) > 0 && onSave({ ...form, amount: Number(form.amount) })}
-        disabled={!form.apartmentId || !(Number(form.amount) > 0)}
+
+      <label className="flex items-center gap-2 mb-3 text-sm" style={{ color: INK }}>
+        <input type="checkbox" checked={repeatMonthly} onChange={(e) => setRepeatMonthly(e.target.checked)} />
+        Repeat monthly from this date
+      </label>
+      {repeatMonthly && (
+        <Field label="Stop after month, optional (leave blank for no end)">
+          <input type="month" className={inputCls} style={inputStyle} value={repeatEndMonth}
+            onChange={(e) => setRepeatEndMonth(e.target.value)} />
+        </Field>
+      )}
+
+      <button onClick={handleSave} disabled={!form.apartmentId || !(Number(form.amount) > 0) || saving}
         className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
-        Save transaction
+        {saving ? "Saving..." : "Save transaction"}
       </button>
+    </Modal>
+  );
+}
+
+/* ---------- Recurring templates management ---------- */
+function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete }) {
+  return (
+    <Modal onClose={onClose} title="Recurring transactions">
+      {templates.length === 0 ? (
+        <div className="text-sm" style={{ color: MUTE }}>
+          No recurring series yet. Tick "Repeat monthly" when adding a transaction to start one.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {templates.map((t) => {
+            const a = apartments.find((x) => x.id === t.apartmentId);
+            return (
+              <div key={t.id} className="rounded border px-3 py-2" style={{ borderColor: LINE }}>
+                <div className="text-sm font-medium" style={{ color: INK }}>
+                  {catLabel(t.category)} - {eur(t.amount)}
+                </div>
+                <div className="text-xs" style={{ color: MUTE }}>
+                  {a ? a.name : "Unknown apartment"} - day {t.dayOfMonth} of month, from {t.startMonth}
+                  {t.endMonth ? ` to ${t.endMonth}` : ", no end date"}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => onUpdate(t.id, { active: !t.active })} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: INK }}>
+                    {t.active ? "Pause" : "Resume"}
+                  </button>
+                  <button onClick={() => { if (confirm("Stop this recurring series? Past entries stay.")) onDelete(t.id); }} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: RUST }}>
+                    Delete series
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Modal>
   );
 }
@@ -667,7 +892,7 @@ function OverviewTab({ apartments, year, apartmentTotals, onAddApartment }) {
   );
 }
 
-function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onDelete }) {
+function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onDelete, onManageRecurring, recurringCount }) {
   const nameFor = (id) => apartments.find((a) => a.id === id)?.name || "Unknown";
   const rows = transactions
     .filter((t) => new Date(t.date).getFullYear() === year)
@@ -680,6 +905,9 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
           <option value="all">All apartments</option>
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
+        <button onClick={onManageRecurring} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>
+          Recurring{recurringCount ? ` (${recurringCount})` : ""}
+        </button>
         <button onClick={onAdd} disabled={apartments.length === 0} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>Add</button>
       </div>
     }>
@@ -697,8 +925,12 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
                 <div className="text-sm" style={{ color: INK }}>
                   {catLabel(t.category)}
                   {apartments.length > 1 && <span style={{ color: MUTE }}> - {nameFor(t.apartmentId)}</span>}
+                  {t.recurringId && <span className="text-xs" style={{ color: TEAL }}> - recurring</span>}
                 </div>
                 {t.description && <div className="text-xs truncate" style={{ color: MUTE }}>{t.description}</div>}
+                {t.attachmentUrl && (
+                  <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-xs underline" style={{ color: TEAL }}>Receipt</a>
+                )}
               </div>
               <div className="font-mono text-sm w-28 text-right shrink-0" style={{ color: t.type === "income" ? GREEN : RUST }}>
                 {t.type === "income" ? "+" : "\u2212"}{eur(t.amount)}
@@ -869,6 +1101,8 @@ function App() {
   const [ready, setReady] = useState(false); // signed in + folder chosen + data loaded
   const [apartments, setApartments] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [recurringTemplates, setRecurringTemplates] = useState([]);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [tab, setTab] = useState("overview");
   const [year, setYear] = useState(new Date().getFullYear());
   const [taxApartmentId, setTaxApartmentId] = useState("all");
@@ -924,10 +1158,25 @@ function App() {
   async function loadData(folderId) {
     try {
       const file = await driveFindFile(folderId, DATA_FILE_NAME);
+      let loadedApartments = [];
+      let loadedTransactions = [];
+      let loadedTemplates = [];
       if (file) {
         const data = await driveReadJson(file.id);
-        setApartments(data.apartments || []);
-        setTransactions(data.transactions || []);
+        loadedApartments = data.apartments || [];
+        loadedTransactions = data.transactions || [];
+        loadedTemplates = data.recurringTemplates || [];
+      }
+      setApartments(loadedApartments);
+      setRecurringTemplates(loadedTemplates);
+      const generated = generateDueRecurring(loadedTemplates, loadedTransactions);
+      if (generated.length) {
+        const merged = [...loadedTransactions, ...generated];
+        setTransactions(merged);
+        setSyncStatus(`Generated ${generated.length} recurring entr${generated.length === 1 ? "y" : "ies"}`);
+        persistData(loadedApartments, merged, loadedTemplates, folderId);
+      } else {
+        setTransactions(loadedTransactions);
       }
       setReady(true);
     } catch (e) {
@@ -954,19 +1203,14 @@ function App() {
     }
   }, []);
 
-  async function persist(nextApartments, nextTransactions) {
-    const ap = nextApartments || apartments;
-    const tx = nextTransactions || transactions;
-    if (nextApartments) setApartments(nextApartments);
-    if (nextTransactions) setTransactions(nextTransactions);
-    if (!folder) return;
+  async function persistData(ap, tx, templates, folderId) {
     try {
-      const file = await driveFindFile(folder.id, DATA_FILE_NAME);
-      const payload = { apartments: ap, transactions: tx };
+      const file = await driveFindFile(folderId, DATA_FILE_NAME);
+      const payload = { apartments: ap, transactions: tx, recurringTemplates: templates };
       if (file) await driveUpdateJson(file.id, payload);
-      else await driveCreateJson(folder.id, DATA_FILE_NAME, payload);
+      else await driveCreateJson(folderId, DATA_FILE_NAME, payload);
       setSyncStatus("Saved to Drive");
-      syncSheet(folder.id, ap, tx, (err, ssId) => {
+      syncSheet(folderId, ap, tx, (err, ssId) => {
         if (err) setSyncStatus("Saved to Drive, sheet sync failed");
         else { setSyncStatus("Saved to Drive and Sheet"); setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`); }
       });
@@ -975,11 +1219,57 @@ function App() {
     }
   }
 
-  function addApartment(data) { persist([...apartments, { id: uid(), ...data }], null); setShowApartmentForm(false); }
-  function updateApartment(id, data) { persist(apartments.map((a) => (a.id === id ? { ...a, ...data } : a)), null); setEditingApartment(null); }
-  function deleteApartment(id) { persist(apartments.filter((a) => a.id !== id), transactions.filter((t) => t.apartmentId !== id)); }
-  function addTransaction(data) { persist(null, [...transactions, { id: uid(), ...data }]); setShowTxForm(false); }
-  function deleteTransaction(id) { persist(null, transactions.filter((t) => t.id !== id)); }
+  async function persist(nextApartments, nextTransactions, nextTemplates) {
+    const ap = nextApartments || apartments;
+    const tx = nextTransactions || transactions;
+    const templates = nextTemplates || recurringTemplates;
+    if (nextApartments) setApartments(nextApartments);
+    if (nextTransactions) setTransactions(nextTransactions);
+    if (nextTemplates) setRecurringTemplates(nextTemplates);
+    if (!folder) return;
+    await persistData(ap, tx, templates, folder.id);
+  }
+
+  function addApartment(data) { persist([...apartments, { id: uid(), ...data }], null, null); setShowApartmentForm(false); }
+  function updateApartment(id, data) { persist(apartments.map((a) => (a.id === id ? { ...a, ...data } : a)), null, null); setEditingApartment(null); }
+  function deleteApartment(id) { persist(apartments.filter((a) => a.id !== id), transactions.filter((t) => t.apartmentId !== id), null); }
+
+  async function addTransaction(data, recurringSeed) {
+    let attachmentFields = {};
+    if (data.__uploadFile) {
+      try {
+        const receiptsFolderId = await findOrCreateFolder(folder.id, "Receipts");
+        const uploaded = await driveUploadBinary(receiptsFolderId, data.__uploadFile.name, data.__uploadFile.mimeType, data.__uploadFile.buffer);
+        attachmentFields = { attachmentFileId: uploaded.id, attachmentName: data.__uploadFile.name, attachmentUrl: uploaded.webViewLink || "" };
+      } catch (e) {
+        setError("Transaction will be saved, but the receipt upload failed: " + e.message);
+      }
+    }
+    const clean = { ...data };
+    delete clean.__uploadFile;
+    const txId = uid();
+    let nextTemplates = recurringTemplates;
+    if (recurringSeed) {
+      const templateId = uid();
+      const template = {
+        id: templateId, apartmentId: clean.apartmentId, type: clean.type, category: clean.category,
+        amount: clean.amount, description: clean.description, dayOfMonth: recurringSeed.dayOfMonth,
+        startMonth: recurringSeed.startMonth, endMonth: recurringSeed.endMonth, active: true,
+      };
+      nextTemplates = [...recurringTemplates, template];
+      clean.recurringId = templateId;
+    }
+    const newTx = { id: txId, ...clean, ...attachmentFields };
+    persist(null, [...transactions, newTx], recurringSeed ? nextTemplates : null);
+    setShowTxForm(false);
+  }
+  function deleteTransaction(id) { persist(null, transactions.filter((t) => t.id !== id), null); }
+  function updateRecurringTemplate(id, patch) {
+    persist(null, null, recurringTemplates.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+  function deleteRecurringTemplate(id) {
+    persist(null, null, recurringTemplates.filter((t) => t.id !== id));
+  }
 
   const years = useMemo(() => {
     const s = new Set(transactions.map((t) => new Date(t.date).getFullYear()));
@@ -1045,7 +1335,8 @@ function App() {
         {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} onAddApartment={() => setShowApartmentForm(true)} />}
         {tab === "transactions" && (
           <TransactionsTab apartments={apartments} transactions={transactions} filterApartmentId={txApartmentFilter}
-            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onDelete={deleteTransaction} />
+            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onDelete={deleteTransaction}
+            onManageRecurring={() => setShowRecurringModal(true)} recurringCount={recurringTemplates.filter((t) => t.active).length} />
         )}
         {tab === "apartments" && (
           <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
@@ -1061,7 +1352,11 @@ function App() {
       {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} />}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
-          onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+          geminiApiKey={config.apiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+      )}
+      {showRecurringModal && (
+        <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
+          onUpdate={updateRecurringTemplate} onDelete={deleteRecurringTemplate} />
       )}
     </div>
   );
