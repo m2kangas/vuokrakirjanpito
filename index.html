@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vuokrakirjanpito</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { background:#F6F5F0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ---------- visual tokens ---------- */
+const INK = "#23241f";
+const CARD = "#FFFFFF";
+const LINE = "#E3E0D4";
+const TEAL = "#2F5266";
+const GREEN = "#3E7A57";
+const RUST = "#A6503B";
+const MUTE = "#8A8776";
+
+/* ---------- categories, same structure and Vero based rules as before ---------- */
+const INCOME_CATEGORIES = [
+  { id: "rent", fi: "Vuokratulo", en: "Rent income" },
+  { id: "water_income", fi: "Vesimaksutulo", en: "Water fee collected from tenant" },
+  { id: "other_income", fi: "Muu tulo", en: "Other income" },
+];
+
+const EXPENSE_CATEGORIES = [
+  { id: "hoitovastike", fi: "Hoitovastike", en: "Maintenance fee", section: "deductible", note: "Fully deductible." },
+  {
+    id: "rahoitusvastike", fi: "Rahoitusvastike", en: "Financing fee", section: "deductible",
+    note: "Deductible or capitalized depending on the apartment's financing fee setting. Set it once in the apartment's details.",
+  },
+  {
+    id: "erityisvastike", fi: "Erityisvastike", en: "Special charge, for example a building wide internet service", section: "deductible",
+    note: "Deductible or capitalized depending on the apartment's special charge setting, same rule as rahoitusvastike. Confirm with the isannoitsija. Set it once in the apartment's details.",
+  },
+  { id: "vesimaksu", fi: "Vesimaksu", en: "Water charge", section: "deductible", note: "Deductible." },
+  {
+    id: "korjauskulut", fi: "Vuosikorjaus", en: "Annual repair costs", section: "deductible",
+    note: "Deductible in full in the year paid. Use this when the work restores the apartment to its previous condition, for example fixing a leak or repainting.",
+  },
+  {
+    id: "perusparannus", fi: "Perusparannus", en: "Improvement or renovation", section: "capitalized",
+    note: "Not deductible in the year paid. Use this when the work raises the apartment above its original standard. Capitalized into your acquisition cost, or depreciated gradually. Confirm the right treatment with Vero or your accountant, then log the yearly deductible portion, if any, under Perusparannuksen poisto.",
+  },
+  {
+    id: "perusparannuksen_poisto", fi: "Perusparannuksen poisto", en: "Depreciation of improvement costs", section: "deductible",
+    note: "Enter the portion of a past improvement cost that you, Vero, or your accountant has determined is deductible this year.",
+  },
+  {
+    id: "huoltopalvelut", fi: "Huolto- ja siivouspalvelut", en: "Maintenance and cleaning services", section: "deductible",
+    note: "Deductible, for example cleaning, gardening, or snow removal that you pay for as the landlord.",
+  },
+  {
+    id: "sahko_vesi_lammitys", fi: "Sahko, vesi ja lammitys", en: "Electricity, water and heating paid by landlord", section: "deductible",
+    note: "Deductible when you pay these yourself rather than the tenant.",
+  },
+  {
+    id: "internet_puhelin", fi: "Internet ja puhelin", en: "Internet and phone", section: "deductible",
+    note: "Deductible only in limited cases, for example a connection you provide as part of the rental, or a measurable increase in your own costs from managing the rental. Keep this modest and be ready to justify it.",
+  },
+  { id: "vakuutus", fi: "Vakuutus", en: "Insurance", section: "deductible", note: "Deductible." },
+  {
+    id: "kiinteistovero", fi: "Kiinteistovero", en: "Real estate tax", section: "deductible",
+    note: "Deductible when you pay it directly, relevant mainly for a directly owned rental property.",
+  },
+  {
+    id: "hallintokulut", fi: "Hallintokulut", en: "Administration costs", section: "deductible",
+    note: "Deductible, for example bookkeeping or help preparing the rental income report.",
+  },
+  {
+    id: "matkakulut", fi: "Matkakulut", en: "Travel costs", section: "deductible",
+    note: "Deductible for necessary trips to show, inspect, or service the apartment.",
+  },
+  { id: "valityspalkkio", fi: "Valityspalkkio", en: "Rental agent fee", section: "deductible", note: "Deductible." },
+  { id: "ilmoituskulut", fi: "Ilmoituskulut", en: "Advertising for tenant", section: "deductible", note: "Deductible." },
+  {
+    id: "perinta_oikeudenkaynti", fi: "Perinta- ja oikeudenkaytikulut", en: "Rent collection and legal costs", section: "deductible",
+    note: "Deductible, for example costs of chasing unpaid rent or ending a tenancy.",
+  },
+  {
+    id: "lainanhoitokulut", fi: "Lainanhoitokulut", en: "Loan service and arrangement fees", section: "deductible",
+    note: "Deductible directly against rental income, unlike interest itself.",
+  },
+  {
+    id: "lainan_korot", fi: "Lainan korot", en: "Loan interest", section: "interest",
+    note: "Not deducted directly against this apartment's rent. Reduces your total capital income in its own box, so it is reported separately. Only deductible if the rent charged is at least market rate.",
+  },
+  {
+    id: "irtaimisto_poisto", fi: "Irtaimiston poisto", en: "Depreciation of movables", section: "deductible",
+    note: "Typically 25% per year on the remaining balance.",
+  },
+  { id: "muu_kulu", fi: "Muu kulu", en: "Other cost", section: "deductible", note: "Deductible if it relates to the rental activity." },
+];
+
+const CONFIGURABLE_SECTION = {
+  rahoitusvastike: {
+    settingKey: "rahoitusvastikeTreatment",
+    options: [
+      { value: "income", label: "Booked as income by the housing company", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", section: "capitalized" },
+    ],
+    defaultValue: "income",
+  },
+  erityisvastike: {
+    settingKey: "erityisvastikeTreatment",
+    options: [
+      { value: "income", label: "Booked as income by the housing company", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", section: "capitalized" },
+    ],
+    defaultValue: "income",
+  },
+};
+
+function getCategorySection(categoryId, apartment) {
+  const config = CONFIGURABLE_SECTION[categoryId];
+  if (!config) {
+    const cat = EXPENSE_CATEGORIES.find((c) => c.id === categoryId);
+    return cat ? cat.section : "deductible";
+  }
+  const chosen = apartment?.[config.settingKey] || config.defaultValue;
+  const opt = config.options.find((o) => o.value === chosen);
+  return opt ? opt.section : "deductible";
+}
+
+const ALL_CATEGORIES = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
+const catLabel = (id) => (ALL_CATEGORIES.find((c) => c.id === id) || {}).fi || id;
+const catEn = (id) => (ALL_CATEGORIES.find((c) => c.id === id) || {}).en || "";
+const categoryLabelFor = (c, apartment) => {
+  if (c.id === "erityisvastike" && apartment?.erityisvastikeDescription) {
+    return `${c.fi} (${apartment.erityisvastikeDescription})`;
+  }
+  return `${c.fi} (${c.en})`;
+};
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const eur = (n) => (n || 0).toLocaleString("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+const dateFmt = (iso) => new Date(iso).toLocaleDateString("fi-FI", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+/* ---------- Google auth + Drive + Sheets ---------- */
+const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+const DRIVE = "https://www.googleapis.com/drive/v3";
+const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
+const SHEETS = "https://sheets.googleapis.com/v4/spreadsheets";
+const DATA_FILE_NAME = "vuokrakirjanpito-data.json";
+const SHEET_FILE_NAME = "Vuokrakirjanpito data";
+
+function loadConfig() {
+  try {
+    return JSON.parse(localStorage.getItem("vkp_config") || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveConfig(patch) {
+  const next = { ...loadConfig(), ...patch };
+  localStorage.setItem("vkp_config", JSON.stringify(next));
+  return next;
+}
+
+let tokenClient = null;
+let currentToken = null; // { access_token, expiresAt }
+
+function authHeaders() {
+  return { Authorization: `Bearer ${currentToken.access_token}` };
+}
+
+function tokenValid() {
+  return currentToken && currentToken.expiresAt > Date.now() + 60000;
+}
+
+function initTokenClient(clientId, onGranted) {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) return;
+      currentToken = { access_token: resp.access_token, expiresAt: Date.now() + resp.expires_in * 1000 };
+      localStorage.setItem("vkp_token", JSON.stringify(currentToken));
+      onGranted();
+    },
+  });
+}
+function requestToken(interactive) {
+  tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+}
+
+async function driveFindFile(folderId, name) {
+  const q = encodeURIComponent(`'${folderId}' in parents and name='${name.replace(/'/g, "\\'")}' and trashed=false`);
+  const res = await fetch(`${DRIVE}/files?q=${q}&fields=files(id,name)`, { headers: authHeaders() });
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+async function driveReadJson(fileId) {
+  const res = await fetch(`${DRIVE}/files/${fileId}?alt=media`, { headers: authHeaders() });
+  return res.json();
+}
+async function driveCreateJson(folderId, name, obj) {
+  const boundary = "vkpboundary";
+  const metadata = { name, parents: [folderId], mimeType: "application/json" };
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(obj)}\r\n--${boundary}--`;
+  const res = await fetch(`${UPLOAD}/files?uploadType=multipart&fields=id`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  return res.json();
+}
+async function driveUpdateJson(fileId, obj) {
+  await fetch(`${UPLOAD}/files/${fileId}?uploadType=media`, {
+    method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(obj),
+  });
+}
+async function driveAddParent(fileId, folderId) {
+  await fetch(`${DRIVE}/files/${fileId}?addParents=${folderId}&fields=id`, { method: "PATCH", headers: authHeaders() });
+}
+
+async function sheetsCreate(title) {
+  const res = await fetch(SHEETS, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      properties: { title },
+      sheets: [{ properties: { title: "Apartments" } }, { properties: { title: "Transactions" } }],
+    }),
+  });
+  return res.json();
+}
+async function sheetsClearAndWrite(spreadsheetId, sheetName, rows) {
+  await fetch(`${SHEETS}/${spreadsheetId}/values/${encodeURIComponent(sheetName)}:clear`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  await fetch(`${SHEETS}/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A1?valueInputOption=RAW`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ values: rows }),
+  });
+}
+
+async function findOrCreateSpreadsheet(folderId) {
+  const existing = await driveFindFile(folderId, SHEET_FILE_NAME);
+  if (existing) return existing.id;
+  const created = await sheetsCreate(SHEET_FILE_NAME);
+  await driveAddParent(created.spreadsheetId, folderId);
+  return created.spreadsheetId;
+}
+
+function rvLabelFor(apartment) {
+  const opt = CONFIGURABLE_SECTION.rahoitusvastike.options.find(
+    (o) => o.value === (apartment.rahoitusvastikeTreatment || "income")
+  );
+  return opt ? opt.label : "";
+}
+function evLabelFor(apartment) {
+  const opt = CONFIGURABLE_SECTION.erityisvastike.options.find(
+    (o) => o.value === (apartment.erityisvastikeTreatment || "income")
+  );
+  return opt ? opt.label : "";
+}
+
+async function syncSheet(folderId, apartments, transactions, onDone) {
+  try {
+    const ssId = await findOrCreateSpreadsheet(folderId);
+    const apRows = [
+      [
+        "Name", "Address", "Housing company", "Your share %",
+        "Rahoitusvastike treatment", "Erityisvastike description", "Erityisvastike treatment", "Notes",
+      ],
+      ...apartments.map((a) => [
+        a.name || "", a.address || "", a.housingCompany || "", a.sharePercent ?? 100,
+        rvLabelFor(a), a.erityisvastikeDescription || "", a.erityisvastikeDescription ? evLabelFor(a) : "", a.notes || "",
+      ]),
+    ];
+    const txRows = [
+      ["Apartment", "Date", "Type", "Category (FI)", "Category (EN)", "Amount EUR", "Description"],
+      ...transactions
+        .slice()
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map((t) => {
+          const a = apartments.find((x) => x.id === t.apartmentId);
+          return [
+            a ? a.name : "", t.date, t.type, catLabel(t.category), catEn(t.category), t.amount, t.description || "",
+          ];
+        }),
+    ];
+    await sheetsClearAndWrite(ssId, "Apartments", apRows);
+    await sheetsClearAndWrite(ssId, "Transactions", txRows);
+    onDone && onDone(null, ssId);
+  } catch (e) {
+    onDone && onDone(e, null);
+  }
+}
+
+/* ---------- small UI atoms ---------- */
+function Section({ title, eyebrow, children, right }) {
+  return (
+    <div className="mb-8">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          {eyebrow && <div className="text-xs uppercase tracking-widest" style={{ color: MUTE, letterSpacing: "0.12em" }}>{eyebrow}</div>}
+          <h2 className="text-lg font-semibold" style={{ color: INK }}>{title}</h2>
+        </div>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+function Field({ label, children }) {
+  return (
+    <label className="block mb-3">
+      <div className="text-xs mb-1" style={{ color: MUTE }}>{label}</div>
+      {children}
+    </label>
+  );
+}
+const inputCls = "w-full px-3 py-2 rounded border text-sm outline-none focus:ring-2";
+const inputStyle = { borderColor: LINE, color: INK };
+
+function EmptyState({ title, body, actionLabel, onAction }) {
+  return (
+    <div className="rounded border text-center px-8 py-14" style={{ borderColor: LINE, background: CARD }}>
+      <div className="text-base font-semibold mb-1" style={{ color: INK }}>{title}</div>
+      <div className="text-sm mb-5" style={{ color: MUTE }}>{body}</div>
+      {onAction && (
+        <button onClick={onAction} className="px-4 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: "rgba(35,36,31,0.4)" }}>
+      <div className="w-full max-w-sm rounded-lg p-5 max-h-[90vh] overflow-y-auto" style={{ background: CARD }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-semibold" style={{ color: INK }}>{title}</div>
+          <button onClick={onClose} style={{ color: MUTE }} className="text-lg leading-none">&times;</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+function RowLine({ label, value, bold, negative, accent }) {
+  const color = accent ? TEAL : negative && value !== 0 ? RUST : INK;
+  const display = negative && value > 0 ? -value : value;
+  return (
+    <div className="flex items-center justify-between py-1 text-sm">
+      <div style={{ color: bold ? INK : "#54524a", fontWeight: bold ? 600 : 400 }}>{label}</div>
+      <div className="font-mono" style={{ color, fontWeight: bold ? 700 : 400 }}>{eur(display)}</div>
+    </div>
+  );
+}
+function StatCard({ label, value, tone }) {
+  const color = tone === "up" ? GREEN : tone === "down" ? RUST : INK;
+  return (
+    <div className="px-4 py-3 rounded border" style={{ borderColor: LINE, background: CARD }}>
+      <div className="text-xs mb-1" style={{ color: MUTE }}>{label}</div>
+      <div className="text-lg font-mono font-semibold" style={{ color }}>{eur(value)}</div>
+    </div>
+  );
+}
+
+/* ---------- Setup screen: credentials, sign in, folder ---------- */
+function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen }) {
+  const [clientId, setClientId] = useState(config.clientId || "");
+  const [apiKey, setApiKey] = useState(config.apiKey || "");
+  const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
+  const [gapiReady, setGapiReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (window.gapi && window.google && window.google.accounts) {
+        setGapiReady(true);
+        clearInterval(t);
+      }
+    }, 200);
+    return () => clearInterval(t);
+  }, []);
+
+  function saveCreds() {
+    onConfigSaved({ clientId: clientId.trim(), apiKey: apiKey.trim(), allowedEmail: allowedEmail.trim() });
+  }
+
+  function connect() {
+    setBusy(true);
+    requestToken(true);
+    setTimeout(() => setBusy(false), 3000);
+  }
+
+  function pickFolder() {
+    window.gapi.load("picker", () => {
+      const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+        .setSelectFolderEnabled(true)
+        .setIncludeFolders(true);
+      const picker = new google.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(currentToken.access_token)
+        .setDeveloperKey(config.apiKey)
+        .setCallback((data) => {
+          if (data.action === google.picker.Action.PICKED) {
+            const doc = data.docs[0];
+            onFolderChosen({ id: doc.id, name: doc.name });
+          }
+        })
+        .build();
+      picker.setVisible(true);
+    });
+  }
+
+  const needsCreds = !config.clientId || !config.apiKey;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-lg border p-6" style={{ borderColor: LINE, background: CARD }}>
+        <div className="text-base font-semibold mb-1" style={{ color: INK }}>Vuokrakirjanpito setup</div>
+        <div className="text-sm mb-5" style={{ color: MUTE }}>
+          This runs entirely in your browser and stores data in your own Google Drive. Nothing goes through
+          any other server.
+        </div>
+
+        {error && (
+          <div className="mb-4 px-3 py-2 rounded text-sm" style={{ background: "#FBEAE5", color: RUST }}>{error}</div>
+        )}
+
+        {needsCreds && (
+          <>
+            <Field label="Google OAuth Client ID">
+              <input className={inputCls} style={inputStyle} value={clientId}
+                placeholder="xxxxxxxx.apps.googleusercontent.com"
+                onChange={(e) => setClientId(e.target.value)} />
+            </Field>
+            <Field label="Google API key">
+              <input className={inputCls} style={inputStyle} value={apiKey}
+                placeholder="AIza..." onChange={(e) => setApiKey(e.target.value)} />
+            </Field>
+            <Field label="Your Google account email">
+              <input className={inputCls} style={inputStyle} value={allowedEmail}
+                placeholder="you@gmail.com" onChange={(e) => setAllowedEmail(e.target.value)} />
+            </Field>
+            <div className="text-xs mb-3" style={{ color: MUTE }}>
+              After you sign in, the app checks the signed-in account against this address and signs out
+              anything else. This is a convenience check, not the real security boundary, that is Google's
+              own sign-in and your OAuth consent screen's test user list.
+            </div>
+            <button onClick={saveCreds} disabled={!clientId.trim() || !apiKey.trim() || !allowedEmail.trim()}
+              className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-40"
+              style={{ background: TEAL, color: "#fff" }}>
+              Save
+            </button>
+          </>
+        )}
+
+        {!needsCreds && !signedIn && (
+          <button onClick={connect} disabled={!gapiReady || busy}
+            className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-40"
+            style={{ background: TEAL, color: "#fff" }}>
+            {gapiReady ? "Connect Google Drive" : "Loading Google..."}
+          </button>
+        )}
+
+        {!needsCreds && signedIn && (
+          <button onClick={pickFolder} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
+            Choose or create a Drive folder
+          </button>
+        )}
+
+        {!needsCreds && (
+          <button
+            onClick={() => { localStorage.removeItem("vkp_config"); localStorage.removeItem("vkp_token"); window.location.reload(); }}
+            className="w-full mt-3 py-2 rounded text-xs" style={{ color: MUTE }}
+          >
+            Reset credentials
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Apartment form ---------- */
+function ApartmentFormModal({ initial, onClose, onSave }) {
+  const [form, setForm] = useState(
+    initial || {
+      name: "", address: "", housingCompany: "", sharePercent: 50,
+      rahoitusvastikeTreatment: "income", erityisvastikeDescription: "", erityisvastikeTreatment: "income",
+      notes: "",
+    }
+  );
+  const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
+  const evConfig = CONFIGURABLE_SECTION.erityisvastike;
+  return (
+    <Modal onClose={onClose} title={initial ? "Edit apartment" : "Add apartment"}>
+      <Field label="Name">
+        <input className={inputCls} style={inputStyle} value={form.name} placeholder="e.g. Maenynkerkko 2h"
+          onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      </Field>
+      <Field label="Address">
+        <input className={inputCls} style={inputStyle} value={form.address} placeholder="Street, Oulu"
+          onChange={(e) => setForm({ ...form, address: e.target.value })} />
+      </Field>
+      <Field label="Housing company">
+        <input className={inputCls} style={inputStyle} value={form.housingCompany} placeholder="e.g. As Oy Maenynkerkko"
+          onChange={(e) => setForm({ ...form, housingCompany: e.target.value })} />
+      </Field>
+      <Field label="Your ownership share, percent">
+        <input type="number" min="0" max="100" className={inputCls} style={inputStyle} value={form.sharePercent}
+          onChange={(e) => setForm({ ...form, sharePercent: e.target.value })} />
+      </Field>
+      <Field label="How the housing company books the rahoitusvastike">
+        <select className={inputCls} style={inputStyle} value={form.rahoitusvastikeTreatment || rvConfig.defaultValue}
+          onChange={(e) => setForm({ ...form, rahoitusvastikeTreatment: e.target.value })}>
+          {rvConfig.options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label} {o.section === "deductible" ? "(deductible)" : "(capitalized)"}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Erityisvastike, what does it cover, leave blank if none">
+        <input className={inputCls} style={inputStyle} value={form.erityisvastikeDescription}
+          placeholder="e.g. Building internet service"
+          onChange={(e) => setForm({ ...form, erityisvastikeDescription: e.target.value })} />
+      </Field>
+      {form.erityisvastikeDescription && (
+        <Field label="How the housing company books the erityisvastike">
+          <select className={inputCls} style={inputStyle} value={form.erityisvastikeTreatment || evConfig.defaultValue}
+            onChange={(e) => setForm({ ...form, erityisvastikeTreatment: e.target.value })}>
+            {evConfig.options.map((o) => (
+              <option key={o.value} value={o.value}>{o.label} {o.section === "deductible" ? "(deductible)" : "(capitalized)"}</option>
+            ))}
+          </select>
+        </Field>
+      )}
+      <Field label="Notes, optional">
+        <textarea className={inputCls} style={{ ...inputStyle, minHeight: 60 }} value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+      </Field>
+      <button onClick={() => form.name.trim() && onSave({ ...form, sharePercent: Number(form.sharePercent) || 0 })}
+        disabled={!form.name.trim()} className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40"
+        style={{ background: TEAL, color: "#fff" }}>
+        Save
+      </button>
+    </Modal>
+  );
+}
+
+/* ---------- Transaction form ---------- */
+function TransactionFormModal({ apartments, defaultApartmentId, onClose, onSave }) {
+  const [form, setForm] = useState({
+    apartmentId: defaultApartmentId || apartments[0]?.id,
+    type: "income", category: "rent", date: new Date().toISOString().slice(0, 10), amount: "", description: "",
+  });
+  const categories = form.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const activeCat = ALL_CATEGORIES.find((c) => c.id === form.category);
+  function setType(type) {
+    const firstCat = (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0].id;
+    setForm({ ...form, type, category: firstCat });
+  }
+  return (
+    <Modal onClose={onClose} title="Add transaction">
+      <Field label="Apartment">
+        <select className={inputCls} style={inputStyle} value={form.apartmentId}
+          onChange={(e) => setForm({ ...form, apartmentId: e.target.value })}>
+          {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </Field>
+      <div className="flex gap-2 mb-3">
+        <button onClick={() => setType("income")} className="flex-1 py-2 rounded text-sm font-medium border"
+          style={{ background: form.type === "income" ? GREEN : "transparent", color: form.type === "income" ? "#fff" : INK, borderColor: form.type === "income" ? GREEN : LINE }}>
+          Income
+        </button>
+        <button onClick={() => setType("expense")} className="flex-1 py-2 rounded text-sm font-medium border"
+          style={{ background: form.type === "expense" ? RUST : "transparent", color: form.type === "expense" ? "#fff" : INK, borderColor: form.type === "expense" ? RUST : LINE }}>
+          Cost
+        </button>
+      </div>
+      <Field label="Category">
+        <select className={inputCls} style={inputStyle} value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{categoryLabelFor(c, apartments.find((a) => a.id === form.apartmentId))}</option>
+          ))}
+        </select>
+        {activeCat?.note && <div className="text-xs mt-1" style={{ color: MUTE }}>{activeCat.note}</div>}
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date">
+          <input type="date" className={inputCls} style={inputStyle} value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })} />
+        </Field>
+        <Field label="Amount, EUR">
+          <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.amount}
+            placeholder="0.00" onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+        </Field>
+      </div>
+      <Field label="Description, optional">
+        <input className={inputCls} style={inputStyle} value={form.description}
+          placeholder="e.g. June rent, tenant Matti" onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      </Field>
+      <button
+        onClick={() => form.apartmentId && Number(form.amount) > 0 && onSave({ ...form, amount: Number(form.amount) })}
+        disabled={!form.apartmentId || !(Number(form.amount) > 0)}
+        className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
+        Save transaction
+      </button>
+    </Modal>
+  );
+}
+
+/* ---------- Tabs ---------- */
+function OverviewTab({ apartments, year, apartmentTotals, onAddApartment }) {
+  if (apartments.length === 0) {
+    return <EmptyState title="No apartments yet" body="Add the first apartment to start recording its rent and costs." actionLabel="Add apartment" onAction={onAddApartment} />;
+  }
+  const totals = apartments.reduce((acc, a) => {
+    const t = apartmentTotals(a.id, year);
+    acc.income += t.income; acc.expense += t.expense; return acc;
+  }, { income: 0, expense: 0 });
+  return (
+    <>
+      <Section eyebrow={String(year)} title="All apartments">
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Total income" value={totals.income} tone="up" />
+          <StatCard label="Total costs" value={totals.expense} tone="down" />
+          <StatCard label="Net result" value={totals.income - totals.expense} />
+        </div>
+      </Section>
+      <Section title="By apartment">
+        <div className="space-y-2">
+          {apartments.map((a) => {
+            const t = apartmentTotals(a.id, year);
+            return (
+              <div key={a.id} className="flex items-center justify-between px-4 py-3 rounded border" style={{ borderColor: LINE, background: CARD }}>
+                <div>
+                  <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
+                  <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany || "No housing company set"} - your share {a.sharePercent ?? 100}%</div>
+                </div>
+                <div className="flex items-center gap-5 font-mono text-sm">
+                  <div style={{ color: GREEN }}>{eur(t.income)}</div>
+                  <div style={{ color: RUST }}>{eur(t.expense)}</div>
+                  <div className="font-semibold" style={{ color: INK }}>{eur(t.net)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+    </>
+  );
+}
+
+function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onDelete }) {
+  const nameFor = (id) => apartments.find((a) => a.id === id)?.name || "Unknown";
+  const rows = transactions
+    .filter((t) => new Date(t.date).getFullYear() === year)
+    .filter((t) => filterApartmentId === "all" || t.apartmentId === filterApartmentId)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  return (
+    <Section eyebrow={String(year)} title="Transactions" right={
+      <div className="flex items-center gap-2">
+        <select value={filterApartmentId} onChange={(e) => setFilterApartmentId(e.target.value)} className="px-3 py-2 rounded border text-sm" style={{ borderColor: LINE, color: INK }}>
+          <option value="all">All apartments</option>
+          {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        <button onClick={onAdd} disabled={apartments.length === 0} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>Add</button>
+      </div>
+    }>
+      {apartments.length === 0 ? (
+        <EmptyState title="Add an apartment first" body="Transactions belong to an apartment." />
+      ) : rows.length === 0 ? (
+        <EmptyState title="Nothing recorded yet" body={`No transactions for ${year} with this filter.`} />
+      ) : (
+        <div className="rounded border overflow-hidden" style={{ borderColor: LINE, background: CARD }}>
+          {rows.map((t) => (
+            <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: LINE }}>
+              <div className="w-1 self-stretch rounded" style={{ background: t.type === "income" ? GREEN : RUST }} />
+              <div className="text-xs font-mono w-24 shrink-0" style={{ color: MUTE }}>{dateFmt(t.date)}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm" style={{ color: INK }}>
+                  {catLabel(t.category)}
+                  {apartments.length > 1 && <span style={{ color: MUTE }}> - {nameFor(t.apartmentId)}</span>}
+                </div>
+                {t.description && <div className="text-xs truncate" style={{ color: MUTE }}>{t.description}</div>}
+              </div>
+              <div className="font-mono text-sm w-28 text-right shrink-0" style={{ color: t.type === "income" ? GREEN : RUST }}>
+                {t.type === "income" ? "+" : "\u2212"}{eur(t.amount)}
+              </div>
+              <button onClick={() => onDelete(t.id)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>Delete</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete }) {
+  return (
+    <Section title="Apartments" right={
+      <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>Add apartment</button>
+    }>
+      {apartments.length === 0 ? (
+        <EmptyState title="No apartments yet" body="Add one to begin." actionLabel="Add apartment" onAction={onAdd} />
+      ) : (
+        <div className="space-y-2">
+          {apartments.map((a) => {
+            const t = apartmentTotals(a.id, year);
+            return (
+              <div key={a.id} className="rounded border px-4 py-3" style={{ borderColor: LINE, background: CARD }}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: MUTE }}>{a.address}</div>
+                    <div className="text-xs mt-0.5" style={{ color: MUTE }}>
+                      Housing company: {a.housingCompany || "not set"} - Your share: {a.sharePercent ?? 100}%
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: MUTE }}>Rahoitusvastike: {rvLabelFor(a)}</div>
+                    {a.erityisvastikeDescription && (
+                      <div className="text-xs mt-0.5" style={{ color: MUTE }}>
+                        Erityisvastike ({a.erityisvastikeDescription}): {evLabelFor(a)}
+                      </div>
+                    )}
+                    {a.notes && <div className="text-xs mt-1" style={{ color: MUTE }}>{a.notes}</div>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => onEdit(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: LINE, color: INK }}>Edit</button>
+                    <button onClick={() => { if (confirm(`Remove ${a.name} and all its transactions?`)) onDelete(a.id); }} className="text-xs p-1.5" style={{ color: RUST }}>Delete</button>
+                  </div>
+                </div>
+                <div className="flex gap-5 mt-3 font-mono text-xs">
+                  <span style={{ color: MUTE }}>{year} income <b style={{ color: GREEN }}>{eur(t.income)}</b></span>
+                  <span style={{ color: MUTE }}>{year} costs <b style={{ color: RUST }}>{eur(t.expense)}</b></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxApartmentId, sheetUrl }) {
+  const relevantApartments = taxApartmentId === "all" ? apartments : apartments.filter((a) => a.id === taxApartmentId);
+
+  function computeFor(apartmentId) {
+    const apartment = apartments.find((a) => a.id === apartmentId);
+    const rows = transactions.filter((t) => t.apartmentId === apartmentId && new Date(t.date).getFullYear() === year);
+    const byCategory = {};
+    for (const c of ALL_CATEGORIES) byCategory[c.id] = 0;
+    for (const r of rows) byCategory[r.category] += Number(r.amount);
+    const incomeTotal = INCOME_CATEGORIES.reduce((s, c) => s + byCategory[c.id], 0);
+    const deductibleCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "deductible");
+    const capitalizedCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "capitalized");
+    const interestCategories = EXPENSE_CATEGORIES.filter((c) => getCategorySection(c.id, apartment) === "interest");
+    const expenseTotal = deductibleCategories.reduce((s, c) => s + byCategory[c.id], 0);
+    const capitalizedTotal = capitalizedCategories.reduce((s, c) => s + byCategory[c.id], 0);
+    const interestTotal = interestCategories.reduce((s, c) => s + byCategory[c.id], 0);
+    return { byCategory, incomeTotal, expenseTotal, capitalizedTotal, interestTotal, deductibleCategories, capitalizedCategories, interestCategories, net: incomeTotal - expenseTotal };
+  }
+
+  function downloadCsv() {
+    const lines = [["Apartment", "Date", "Type", "Category", "Category (EN)", "Amount EUR", "Description"]];
+    transactions
+      .filter((t) => new Date(t.date).getFullYear() === year)
+      .filter((t) => taxApartmentId === "all" || t.apartmentId === taxApartmentId)
+      .forEach((t) => {
+        const a = apartments.find((a) => a.id === t.apartmentId);
+        lines.push([a?.name || "", t.date, t.type, catLabel(t.category), catEn(t.category), String(t.amount).replace(".", ","), t.description || ""]);
+      });
+    const csv = lines.map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = `vuokratulot_${year}.csv`; link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (apartments.length === 0) return <EmptyState title="No apartments yet" body="Add an apartment and record transactions first." />;
+
+  return (
+    <Section eyebrow={String(year)} title="Tax report" right={
+      <div className="flex items-center gap-2">
+        <select value={taxApartmentId} onChange={(e) => setTaxApartmentId(e.target.value)} className="px-3 py-2 rounded border text-sm" style={{ borderColor: LINE, color: INK }}>
+          <option value="all">All apartments, separate</option>
+          {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        <button onClick={downloadCsv} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Export CSV</button>
+        {sheetUrl && <a href={sheetUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Open Sheet</a>}
+      </div>
+    }>
+      <div className="text-xs mb-5 px-3 py-2 rounded" style={{ background: "#EEF2E9", color: "#4A5C3D" }}>
+        Structured like the Finnish rental income report (vuokratulot, form 7H). Vuosikorjaus is deductible in
+        full, perusparannus is not and gets capitalized or depreciated instead. Loan interest is shown
+        separately, it reduces your total capital income rather than this apartment's rental result, and is
+        not deductible at all if you charge below market rent. This is a starting point for your own filing,
+        not tax advice, confirm the financing fee and erityisvastike treatment with your housing company.
+      </div>
+      <div className="space-y-6">
+        {relevantApartments.map((a) => {
+          const r = computeFor(a.id);
+          const share = (a.sharePercent ?? 100) / 100;
+          return (
+            <div key={a.id} className="rounded border overflow-hidden" style={{ borderColor: LINE, background: CARD }}>
+              <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F1EFE6" }}>
+                <div className="text-sm font-semibold" style={{ color: INK }}>{a.name}</div>
+                <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany}</div>
+              </div>
+              <div className="px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Income</div>
+                {INCOME_CATEGORIES.map((c) => <RowLine key={c.id} label={`${c.fi} (${c.en})`} value={r.byCategory[c.id]} />)}
+                <RowLine label="Total rental income" value={r.incomeTotal} bold />
+
+                <div className="text-xs font-semibold uppercase tracking-wide mt-4 mb-2" style={{ color: MUTE }}>Deductible costs</div>
+                {r.deductibleCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
+                <RowLine label="Total deductible costs" value={r.expenseTotal} negative bold />
+
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: LINE }}>
+                  <RowLine label="Net rental result, 100%" value={r.net} bold />
+                  <RowLine label={`Your taxable share, ${a.sharePercent ?? 100}%`} value={r.net * share} bold accent />
+                </div>
+
+                {r.capitalizedTotal !== 0 && (
+                  <div className="mt-4 pt-3 border-t" style={{ borderColor: LINE }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Not deductible, added to acquisition cost</div>
+                    {r.capitalizedCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
+                    <RowLine label="Total added to acquisition cost" value={r.capitalizedTotal} negative bold />
+                  </div>
+                )}
+
+                {r.interestTotal !== 0 && (
+                  <div className="mt-4 pt-3 border-t" style={{ borderColor: LINE }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Loan interest, reported separately</div>
+                    {r.interestCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
+                    <RowLine label="Total loan interest" value={r.interestTotal} negative bold />
+                    <RowLine label={`Your taxable share of the interest, ${a.sharePercent ?? 100}%`} value={r.interestTotal * share} negative />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/* ---------- Main app ---------- */
+function App() {
+  const [config, setConfig] = useState(loadConfig());
+  const [ready, setReady] = useState(false); // signed in + folder chosen + data loaded
+  const [apartments, setApartments] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [tab, setTab] = useState("overview");
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [taxApartmentId, setTaxApartmentId] = useState("all");
+  const [txApartmentFilter, setTxApartmentFilter] = useState("all");
+  const [showApartmentForm, setShowApartmentForm] = useState(false);
+  const [showTxForm, setShowTxForm] = useState(false);
+  const [editingApartment, setEditingApartment] = useState(null);
+  const [error, setError] = useState("");
+  const [syncStatus, setSyncStatus] = useState("");
+  const [sheetUrl, setSheetUrl] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+  const [folder, setFolder] = useState(config.folderId ? { id: config.folderId, name: config.folderName } : null);
+  const tokenClientReadyRef = useRef(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (window.google && window.google.accounts && config.clientId && !tokenClientReadyRef.current) {
+        initTokenClient(config.clientId, onTokenGranted);
+        tokenClientReadyRef.current = true;
+        clearInterval(t);
+      }
+    }, 200);
+    return () => clearInterval(t);
+  }, [config.clientId]);
+
+  async function onTokenGranted() {
+    const allowed = (config.allowedEmail || "").trim().toLowerCase();
+    if (!allowed) { setSignedIn(true); return; }
+    try {
+      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: authHeaders() });
+      const info = await res.json();
+      const email = (info.email || "").toLowerCase();
+      if (email !== allowed) {
+        currentToken = null;
+        localStorage.removeItem("vkp_token");
+        setSignedIn(false);
+        setError(`Signed in as ${info.email || "unknown"}, but this app is set up for ${config.allowedEmail}. Signed out.`);
+        return;
+      }
+      setError("");
+      setSignedIn(true);
+    } catch (e) {
+      setError("Could not verify the signed-in account: " + e.message);
+    }
+  }
+
+  function reconnect() {
+    if (!tokenClientReadyRef.current) return;
+    setError("");
+    requestToken(true);
+  }
+
+  async function loadData(folderId) {
+    try {
+      const file = await driveFindFile(folderId, DATA_FILE_NAME);
+      if (file) {
+        const data = await driveReadJson(file.id);
+        setApartments(data.apartments || []);
+        setTransactions(data.transactions || []);
+      }
+      setReady(true);
+    } catch (e) {
+      setError("Could not load data from Drive: " + e.message);
+      setReady(true);
+    }
+  }
+
+  useEffect(() => {
+    if (signedIn && folder) loadData(folder.id);
+  }, [signedIn, folder]);
+
+  // try silent token restore on load
+  useEffect(() => {
+    const saved = localStorage.getItem("vkp_token");
+    if (saved && config.clientId) {
+      try {
+        const tok = JSON.parse(saved);
+        if (tok.expiresAt > Date.now() + 60000) {
+          currentToken = tok;
+          onTokenGranted();
+        }
+      } catch {}
+    }
+  }, []);
+
+  async function persist(nextApartments, nextTransactions) {
+    const ap = nextApartments || apartments;
+    const tx = nextTransactions || transactions;
+    if (nextApartments) setApartments(nextApartments);
+    if (nextTransactions) setTransactions(nextTransactions);
+    if (!folder) return;
+    try {
+      const file = await driveFindFile(folder.id, DATA_FILE_NAME);
+      const payload = { apartments: ap, transactions: tx };
+      if (file) await driveUpdateJson(file.id, payload);
+      else await driveCreateJson(folder.id, DATA_FILE_NAME, payload);
+      setSyncStatus("Saved to Drive");
+      syncSheet(folder.id, ap, tx, (err, ssId) => {
+        if (err) setSyncStatus("Saved to Drive, sheet sync failed");
+        else { setSyncStatus("Saved to Drive and Sheet"); setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`); }
+      });
+    } catch (e) {
+      setError("Could not save to Google Drive: " + e.message + ". If this persists, click Reconnect Google.");
+    }
+  }
+
+  function addApartment(data) { persist([...apartments, { id: uid(), ...data }], null); setShowApartmentForm(false); }
+  function updateApartment(id, data) { persist(apartments.map((a) => (a.id === id ? { ...a, ...data } : a)), null); setEditingApartment(null); }
+  function deleteApartment(id) { persist(apartments.filter((a) => a.id !== id), transactions.filter((t) => t.apartmentId !== id)); }
+  function addTransaction(data) { persist(null, [...transactions, { id: uid(), ...data }]); setShowTxForm(false); }
+  function deleteTransaction(id) { persist(null, transactions.filter((t) => t.id !== id)); }
+
+  const years = useMemo(() => {
+    const s = new Set(transactions.map((t) => new Date(t.date).getFullYear()));
+    s.add(new Date().getFullYear());
+    return Array.from(s).sort((a, b) => b - a);
+  }, [transactions]);
+
+  function apartmentTotals(apartmentId, y) {
+    const rows = transactions.filter((t) => t.apartmentId === apartmentId && new Date(t.date).getFullYear() === y);
+    const income = rows.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+    const expense = rows.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+    return { income, expense, net: income - expense };
+  }
+
+  if (!config.clientId || !config.apiKey || !signedIn || !folder) {
+    return (
+      <SetupScreen
+        config={config}
+        signedIn={signedIn}
+        error={error}
+        onConfigSaved={(patch) => setConfig(saveConfig(patch))}
+        onFolderChosen={(f) => { setFolder(f); saveConfig({ folderId: f.id, folderName: f.name }); }}
+      />
+    );
+  }
+
+  if (!ready) {
+    return <div className="min-h-screen flex items-center justify-center text-sm" style={{ color: MUTE }}>Loading from Drive...</div>;
+  }
+
+  return (
+    <div className="min-h-screen">
+      <header className="border-b" style={{ borderColor: LINE, background: CARD }}>
+        <div className="max-w-5xl mx-auto px-5 py-5 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <div className="text-base font-semibold tracking-tight" style={{ color: INK }}>Vuokrakirjanpito</div>
+            <div className="text-xs" style={{ color: MUTE }}>
+              Folder: {folder.name} {syncStatus && <span> - {syncStatus}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={reconnect} className="px-2 py-1 rounded text-xs border" style={{ borderColor: LINE, color: MUTE }}>
+              Reconnect Google
+            </button>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="px-3 py-2 rounded border text-sm font-mono" style={{ borderColor: LINE, color: INK }}>
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+        <nav className="max-w-5xl mx-auto px-5 flex gap-1 flex-wrap">
+          {[["overview", "Overview"], ["transactions", "Transactions"], ["apartments", "Apartments"], ["tax", "Tax report"]].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} className="px-4 py-2.5 text-sm font-medium border-b-2"
+              style={{ borderColor: tab === id ? TEAL : "transparent", color: tab === id ? INK : MUTE }}>
+              {label}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-5 py-8">
+        {error && <div className="mb-4 px-3 py-2 rounded text-sm" style={{ background: "#FBEAE5", color: RUST }}>{error}</div>}
+
+        {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} onAddApartment={() => setShowApartmentForm(true)} />}
+        {tab === "transactions" && (
+          <TransactionsTab apartments={apartments} transactions={transactions} filterApartmentId={txApartmentFilter}
+            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onDelete={deleteTransaction} />
+        )}
+        {tab === "apartments" && (
+          <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
+            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} />
+        )}
+        {tab === "tax" && (
+          <TaxReportTab apartments={apartments} transactions={transactions} year={year} taxApartmentId={taxApartmentId}
+            setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} />
+        )}
+      </main>
+
+      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} />}
+      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} />}
+      {showTxForm && (
+        <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
+          onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
