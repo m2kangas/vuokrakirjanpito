@@ -1185,6 +1185,7 @@ function App() {
   const [editingApartment, setEditingApartment] = useState(null);
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
+  const [sheetSyncFailed, setSheetSyncFailed] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [folder, setFolder] = useState(config.folderId ? { id: config.folderId, name: config.folderName } : null);
@@ -1319,10 +1320,17 @@ function App() {
       const payload = { apartments: ap, transactions: tx, recurringTemplates: templates };
       if (file) await driveUpdateJson(file.id, payload);
       else await driveCreateJson(folderId, DATA_FILE_NAME, payload);
-      setSyncStatus("Saved to Drive");
+      const savedAt = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
+      setSyncStatus(`Saved to Drive at ${savedAt}`);
+      setSheetSyncFailed(false);
       syncSheet(folderId, ap, tx, (err, ssId) => {
-        if (err) setSyncStatus("Saved to Drive, sheet sync failed");
-        else { setSyncStatus("Saved to Drive and Sheet"); setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`); }
+        const now = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
+        if (err) { setSyncStatus(`Saved to Drive at ${savedAt}, sheet sync failed at ${now}`); setSheetSyncFailed(true); }
+        else {
+          setSyncStatus(`Saved to Drive and Sheet at ${now}`);
+          setSheetSyncFailed(false);
+          setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`);
+        }
       });
     } catch (e) {
       setError("Could not save to Google Drive: " + e.message + ". If this persists, click Reconnect Google.");
@@ -1338,6 +1346,16 @@ function App() {
     if (nextTemplates) setRecurringTemplates(nextTemplates);
     if (!folder) return;
     await persistData(ap, tx, templates, folder.id);
+  }
+
+  function retrySheetSync() {
+    if (!folder) return;
+    setSyncStatus("Retrying sheet sync...");
+    syncSheet(folder.id, apartments, transactions, (err, ssId) => {
+      const now = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
+      if (err) { setSyncStatus(`Sheet sync failed again at ${now}: ${err.message}`); setSheetSyncFailed(true); }
+      else { setSyncStatus(`Saved to Drive and Sheet at ${now}`); setSheetSyncFailed(false); setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`); }
+    });
   }
 
   function addApartment(data) { persist([...apartments, { id: uid(), ...data }], null, null); setShowApartmentForm(false); }
@@ -1416,8 +1434,13 @@ function App() {
         <div className="max-w-5xl mx-auto px-5 py-5 flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="text-base font-semibold tracking-tight" style={{ color: INK }}>Vuokrakirjanpito</div>
-            <div className="text-xs" style={{ color: MUTE }}>
-              Folder: {folder.name} {syncStatus && <span> - {syncStatus}</span>}
+            <div className="text-xs flex items-center gap-2" style={{ color: sheetSyncFailed ? RUST : MUTE }}>
+              <span>Folder: {folder.name} {syncStatus && <span> - {syncStatus}</span>}</span>
+              {sheetSyncFailed && (
+                <button onClick={retrySheetSync} className="px-2 py-0.5 rounded border text-xs" style={{ borderColor: RUST, color: RUST }}>
+                  Retry sheet sync
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
