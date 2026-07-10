@@ -319,6 +319,35 @@ function generateDueRecurring(templates, transactions) {
   return newTx;
 }
 
+/* For budget display only, never persisted. Fills every month of the given year that an active
+   recurring series covers but that has no actual transaction yet, past or future. */
+function projectedTransactionsForYear(templates, transactions, year) {
+  const jan = `${year}-01`;
+  const dec = `${year}-12`;
+  const out = [];
+  for (const t of templates) {
+    if (!t.active) continue;
+    let cursor = t.startMonth > jan ? t.startMonth : jan;
+    const end = t.endMonth && t.endMonth < dec ? t.endMonth : dec;
+    let guard = 0;
+    while (cursor <= end && guard < 12) {
+      guard++;
+      const already = transactions.some((tx) => tx.recurringId === t.id && monthKey(tx.date) === cursor);
+      if (!already) {
+        const [y, m] = cursor.split("-").map(Number);
+        const day = Math.min(t.dayOfMonth || 1, daysInMonth(y, m));
+        out.push({
+          id: `proj-${t.id}-${cursor}`, apartmentId: t.apartmentId, type: t.type, category: t.category,
+          date: `${cursor}-${String(day).padStart(2, "0")}`, amount: t.amount, description: t.description || "",
+          recurringId: t.id, projected: true,
+        });
+      }
+      cursor = addMonths(cursor, 1);
+    }
+  }
+  return out;
+}
+
 /* ---------- Gemini receipt extraction ---------- */
 async function extractReceiptWithGemini(apiKey, base64, mimeType) {
   const categoryList = ALL_CATEGORIES.map((c) => `${c.id}: ${c.fi} / ${c.en}`).join("\n");
@@ -1024,7 +1053,7 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete }) 
 }
 
 /* ---------- Tabs ---------- */
-function OverviewTab({ apartments, year, apartmentTotals, onAddApartment }) {
+function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProjected, onAddApartment }) {
   if (apartments.length === 0) {
     return <EmptyState title="No apartments yet" body="Add the first apartment to start recording its rent and costs." actionLabel="Add apartment" onAction={onAddApartment} />;
   }
@@ -1032,30 +1061,53 @@ function OverviewTab({ apartments, year, apartmentTotals, onAddApartment }) {
     const t = apartmentTotals(a.id, year);
     acc.income += t.income; acc.expense += t.expense; return acc;
   }, { income: 0, expense: 0 });
+  const projected = apartments.reduce((acc, a) => {
+    const t = apartmentTotalsProjected(a.id, year);
+    acc.income += t.income; acc.expense += t.expense; return acc;
+  }, { income: 0, expense: 0 });
   return (
     <>
-      <Section eyebrow={String(year)} title="All apartments">
+      <Section eyebrow={String(year)} title="Recorded so far">
         <div className="grid grid-cols-3 gap-3">
           <StatCard label="Total income" value={totals.income} tone="up" />
           <StatCard label="Total costs" value={totals.expense} tone="down" />
           <StatCard label="Net result" value={totals.income - totals.expense} />
         </div>
       </Section>
+      <Section eyebrow={String(year)} title="Projected full year">
+        <div className="text-xs mb-3" style={{ color: MUTE }}>
+          Recorded transactions plus your active recurring series carried through December, assuming they continue
+          exactly as set up. This is a budget, not a record, the Tax report only ever uses what is actually recorded.
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Projected income" value={projected.income} tone="up" />
+          <StatCard label="Projected costs" value={projected.expense} tone="down" />
+          <StatCard label="Projected net" value={projected.income - projected.expense} />
+        </div>
+      </Section>
       <Section title="By apartment">
         <div className="space-y-2">
           {apartments.map((a) => {
             const t = apartmentTotals(a.id, year);
+            const p = apartmentTotalsProjected(a.id, year);
             return (
-              <div key={a.id} className="flex items-center justify-between px-4 py-3 rounded border" style={{ borderColor: LINE, background: CARD }}>
-                <div>
-                  <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
-                  <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany || "No housing company set"} - your share {a.sharePercent ?? 100}%</div>
+              <div key={a.id} className="px-4 py-3 rounded border" style={{ borderColor: LINE, background: CARD }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
+                    <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany || "No housing company set"} - your share {a.sharePercent ?? 100}%</div>
+                  </div>
+                  <div className="flex items-center gap-5 font-mono text-sm">
+                    <div style={{ color: GREEN }}>{eur(t.income)}</div>
+                    <div style={{ color: RUST }}>{eur(t.expense)}</div>
+                    <div className="font-semibold" style={{ color: INK }}>{eur(t.net)}</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-5 font-mono text-sm">
-                  <div style={{ color: GREEN }}>{eur(t.income)}</div>
-                  <div style={{ color: RUST }}>{eur(t.expense)}</div>
-                  <div className="font-semibold" style={{ color: INK }}>{eur(t.net)}</div>
-                </div>
+                {(p.income !== t.income || p.expense !== t.expense) && (
+                  <div className="text-xs mt-1 text-right font-mono" style={{ color: TEAL }}>
+                    Projected full year net: {eur(p.net)}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1227,7 +1279,9 @@ function TaxReportTab({ apartments, transactions, year, taxApartmentId, setTaxAp
         interest is shown separately, it reduces your total capital income rather than this apartment's rental
         result, and is not deductible at all if you charge below market rent. The PDF summary mirrors the official
         form's five numbered lines per apartment, hoitovastike and vesimaksu combine into one line there, matching
-        Vero's own layout. This is a starting point for your own filing, not tax advice.
+        Vero's own layout. This report only ever counts transactions you have actually recorded, not planned
+        recurring ones still ahead of today, that full year budget view lives on the Overview tab instead.
+        This is a starting point for your own filing, not tax advice.
       </div>
       <div className="space-y-6">
         {relevantApartments.map((a) => {
@@ -1525,6 +1579,14 @@ function App() {
     return { income, expense, net: income - expense };
   }
 
+  function apartmentTotalsProjected(apartmentId, y) {
+    const projected = projectedTransactionsForYear(recurringTemplates, transactions, y).filter((t) => t.apartmentId === apartmentId);
+    const rows = [...transactions.filter((t) => t.apartmentId === apartmentId && new Date(t.date).getFullYear() === y), ...projected];
+    const income = rows.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+    const expense = rows.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+    return { income, expense, net: income - expense };
+  }
+
   if (!config.clientId || !config.apiKey || !signedIn || !folder) {
     return (
       <SetupScreen
@@ -1581,7 +1643,7 @@ function App() {
       <main className="max-w-5xl mx-auto px-5 py-8">
         {error && <div className="mb-4 px-3 py-2 rounded text-sm" style={{ background: "#FBEAE5", color: RUST }}>{error}</div>}
 
-        {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} onAddApartment={() => setShowApartmentForm(true)} />}
+        {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} apartmentTotalsProjected={apartmentTotalsProjected} onAddApartment={() => setShowApartmentForm(true)} />}
         {tab === "transactions" && (
           <TransactionsTab apartments={apartments} transactions={transactions} filterApartmentId={txApartmentFilter}
             setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onDelete={deleteTransaction}
