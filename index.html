@@ -201,6 +201,12 @@ const TRANSLATIONS = {
     apt_field_share: "Your ownership share, percent", apt_field_notes: "Notes, optional",
     apt_field_import_doc: "Import from isannoitsijantodistus or similar document, optional (image or PDF)",
     apt_fill_from_doc: "Fill from document with Gemini",
+    apt_loans_title: "Company loans (lainaosuudet), optional",
+    apt_loan_name: "Loan name, e.g. RL3 OP-448/Ikkunat",
+    apt_loan_balance: "Remaining balance, EUR", apt_loan_date: "As of date",
+    apt_loan_payment: "Monthly payment, EUR", apt_loan_rate: "Interest rate, % per year, optional",
+    apt_loan_add: "Add loan", apt_loan_note: "Remaining balance is estimated forward from the reference date using the payment and rate you give, it will not exactly match the bank's own schedule, refresh it whenever you get a new isannoitsijantodistus.",
+    apt_loans_remaining: "Estimated remaining loan",
     tax_title: "Tax report", tax_all_separate: "All apartments, separate",
     tax_export_csv: "Export CSV", tax_download_pdf: "Download 7H summary PDF", tax_building_pdf: "Building PDF...",
     tax_get_blank_form: "Get blank 7H form", tax_open_sheet: "Open Sheet",
@@ -282,6 +288,12 @@ const TRANSLATIONS = {
     apt_field_share: "Omistusosuutesi, prosenttia", apt_field_notes: "Muistiinpanot, valinnainen",
     apt_field_import_doc: "Tuo isannoitsijantodistuksesta tai vastaavasta asiakirjasta, valinnainen (kuva tai PDF)",
     apt_fill_from_doc: "Tayta asiakirjasta Geminilla",
+    apt_loans_title: "Yhtion lainat (lainaosuudet), valinnainen",
+    apt_loan_name: "Lainan nimi, esim. RL3 OP-448/Ikkunat",
+    apt_loan_balance: "Jaljella oleva maara, EUR", apt_loan_date: "Tilanne paivamaarana",
+    apt_loan_payment: "Kuukausierä, EUR", apt_loan_rate: "Korko, % vuodessa, valinnainen",
+    apt_loan_add: "Lisaa laina", apt_loan_note: "Jaljella oleva maara on arvio, laskettu eteenpain viitepaivamaarasta antamallasi erasuuruudella ja korolla, se ei tasmaa taysin pankin omaan laskentaan. Paivita tiedot aina, kun saat uuden isannoitsijantodistuksen.",
+    apt_loans_remaining: "Arvioitu jaljella oleva laina",
     tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
     tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
     tax_get_blank_form: "Hae tyhja 7H-lomake", tax_open_sheet: "Avaa Sheet",
@@ -607,8 +619,10 @@ async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
     '"companyId":"<Y-tunnus in format 1234567-8, or empty string if not found>",' +
     '"unitNumber":"<huoneiston numero or tunnus, or empty string>",' +
     '"address":"<street address of the apartment if stated, or empty string>",' +
-    '"summary":"<one or two sentence summary in Finnish of other key facts found in the document, for example pinta-ala, hoitovastike euro per kk, rahoitusvastike euro per kk, or yhtiolainaosuus, or empty string if nothing else relevant is stated>"}\n' +
-    "Do not guess or invent values that are not explicitly stated in the document, use an empty string instead.";
+    '"summary":"<one or two sentence summary in Finnish of other key facts found in the document, for example pinta-ala, hoitovastike euro per kk, or empty string if nothing else relevant is stated>",' +
+    '"loans":[{"name":"<loan name exactly as printed, for example RL3 OP-448/Ikkunat>","referenceBalance":<remaining lainaosuus in EUR for this specific apartment, plain number>,"referenceDate":"YYYY-MM-DD, the date this lainaosuus figure is valid as of","monthlyPayment":<the monthly rahoitusvastike euro amount tied to this loan for this apartment, plain number, or null if not stated>,"annualRatePercent":<the loan interest rate as a plain percent number, for example 5.45, or null if not stated>}]}\n' +
+    'Only include a loan in "loans" if this specific apartment has a lainaosuus (loan share) listed for it, usually under a "Lainaosuudet" section tied to this huoneisto. Do not include company-wide loan totals that are not attributed to this apartment. Use an empty array if none are found. ' +
+    "Do not guess or invent values that are not explicitly stated in the document, use an empty string or null instead.";
   const body = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }] };
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
     method: "POST",
@@ -620,6 +634,36 @@ async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const cleaned = text.replace(/```json|```/g, "").trim();
   return JSON.parse(cleaned);
+}
+
+/* Estimates a company loan share (yhtiolainaosuus) balance forward from a known reference point.
+   Uses standard amortizing loan math when an interest rate is given, otherwise a simple linear
+   fallback. Always an estimate, real bank schedules can drift from this over time. */
+function monthsBetween(fromISO, toISO) {
+  const from = new Date(fromISO);
+  const to = new Date(toISO);
+  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+}
+function estimateLoanBalance(loan, asOfISO) {
+  const months = monthsBetween(loan.referenceDate, asOfISO);
+  if (months <= 0) return { balance: Number(loan.referenceBalance) || 0, monthsElapsed: 0 };
+  let balance = Number(loan.referenceBalance) || 0;
+  const payment = Number(loan.monthlyPayment) || 0;
+  const rate = Number(loan.annualRatePercent);
+  let elapsed = 0;
+  if (rate > 0) {
+    const monthlyRate = rate / 100 / 12;
+    for (let i = 0; i < months && balance > 0; i++) {
+      const interest = balance * monthlyRate;
+      const principal = payment - interest;
+      balance = Math.max(0, balance - principal);
+      elapsed++;
+    }
+  } else {
+    balance = Math.max(0, balance - payment * months);
+    elapsed = months;
+  }
+  return { balance, monthsElapsed: elapsed };
 }
 
 function computeApartmentYear(apartment, transactions, year) {
@@ -1104,12 +1148,22 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
     initial || {
       name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
       rahoitusvastikeTreatment: "income", erityisvastikeDescription: "", erityisvastikeTreatment: "income",
-      notes: "",
+      notes: "", loans: [],
     }
   );
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
   const evConfig = CONFIGURABLE_SECTION.erityisvastike;
   const optLabel = (o) => (lang === "fi" ? o.labelFi : o.label);
+  const loans = form.loans || [];
+  function addLoan() {
+    setForm({ ...form, loans: [...loans, { id: uid(), name: "", referenceBalance: "", referenceDate: new Date().toISOString().slice(0, 10), monthlyPayment: "", annualRatePercent: "" }] });
+  }
+  function updateLoan(id, patch) {
+    setForm({ ...form, loans: loans.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+  }
+  function removeLoan(id) {
+    setForm({ ...form, loans: loans.filter((l) => l.id !== id) });
+  }
   const [docFile, setDocFile] = useState(null);
   const [docScanning, setDocScanning] = useState(false);
   const [docError, setDocError] = useState("");
@@ -1123,6 +1177,13 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
       const buf = await docFile.arrayBuffer();
       const base64 = arrayBufferToBase64(buf);
       const extracted = await extractApartmentInfoWithGemini(geminiApiKey, base64, docFile.type || "application/pdf");
+      const scannedLoans = (extracted.loans || [])
+        .filter((l) => l && l.name && l.referenceBalance != null && l.referenceDate)
+        .map((l) => ({
+          id: uid(), name: l.name, referenceBalance: String(l.referenceBalance), referenceDate: l.referenceDate,
+          monthlyPayment: l.monthlyPayment != null ? String(l.monthlyPayment) : "",
+          annualRatePercent: l.annualRatePercent != null ? String(l.annualRatePercent) : "",
+        }));
       setForm({
         ...form,
         housingCompany: extracted.housingCompany || form.housingCompany,
@@ -1130,6 +1191,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         unitNumber: extracted.unitNumber || form.unitNumber,
         address: extracted.address || form.address,
         notes: extracted.summary ? (form.notes ? `${form.notes}\n${extracted.summary}` : extracted.summary) : form.notes,
+        loans: scannedLoans.length ? scannedLoans : (form.loans || []),
       });
     } catch (e) {
       setDocError((lang === "fi" ? "Asiakirjan lukeminen epaonnistui: " : "Could not read the document: ") + e.message);
@@ -1215,11 +1277,53 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
           </select>
         </Field>
       )}
+      <div className="mb-3">
+        <div className="text-xs mb-2" style={{ color: MUTE }}>{t("apt_loans_title")}</div>
+        {loans.map((l) => (
+          <div key={l.id} className="rounded border p-2 mb-2" style={{ borderColor: LINE }}>
+            <input className={inputCls} style={{ ...inputStyle, marginBottom: 4 }} value={l.name} placeholder={t("apt_loan_name")}
+              onChange={(e) => updateLoan(l.id, { name: e.target.value })} />
+            <div className="grid grid-cols-2 gap-1 mb-1">
+              <Field label={t("apt_loan_balance")}>
+                <input type="number" step="0.01" className={inputCls} style={inputStyle} value={l.referenceBalance}
+                  onChange={(e) => updateLoan(l.id, { referenceBalance: e.target.value })} />
+              </Field>
+              <Field label={t("apt_loan_date")}>
+                <input type="date" className={inputCls} style={inputStyle} value={l.referenceDate}
+                  onChange={(e) => updateLoan(l.id, { referenceDate: e.target.value })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-1 mb-1">
+              <Field label={t("apt_loan_payment")}>
+                <input type="number" step="0.01" className={inputCls} style={inputStyle} value={l.monthlyPayment}
+                  onChange={(e) => updateLoan(l.id, { monthlyPayment: e.target.value })} />
+              </Field>
+              <Field label={t("apt_loan_rate")}>
+                <input type="number" step="0.01" className={inputCls} style={inputStyle} value={l.annualRatePercent}
+                  onChange={(e) => updateLoan(l.id, { annualRatePercent: e.target.value })} />
+              </Field>
+            </div>
+            <button type="button" onClick={() => removeLoan(l.id)} className="text-xs" style={{ color: RUST }}>{t("btn_delete")}</button>
+          </div>
+        ))}
+        <button type="button" onClick={addLoan} className="w-full py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>
+          {t("apt_loan_add")}
+        </button>
+        <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_loan_note")}</div>
+      </div>
       <Field label={t("apt_field_notes")}>
         <textarea className={inputCls} style={{ ...inputStyle, minHeight: 60 }} value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })} />
       </Field>
-      <button onClick={() => form.name.trim() && onSave({ ...form, sharePercent: Number(form.sharePercent) || 0 })}
+      <button onClick={() => form.name.trim() && onSave({
+          ...form, sharePercent: Number(form.sharePercent) || 0,
+          loans: loans.map((l) => ({
+            id: l.id, name: l.name, referenceDate: l.referenceDate,
+            referenceBalance: Number(l.referenceBalance) || 0,
+            monthlyPayment: Number(l.monthlyPayment) || 0,
+            annualRatePercent: l.annualRatePercent ? Number(l.annualRatePercent) : null,
+          })),
+        })}
         disabled={!form.name.trim()} className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40"
         style={{ background: TEAL, color: "#fff" }}>
         {t("btn_save")}
@@ -1786,6 +1890,19 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                   <span style={{ color: MUTE }}>{year} income <b style={{ color: GREEN }}>{eur(tot.income)}</b></span>
                   <span style={{ color: MUTE }}>{year} costs <b style={{ color: RUST }}>{eur(tot.expense)}</b></span>
                 </div>
+                {(a.loans || []).length > 0 && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: LINE }}>
+                    {a.loans.map((l) => {
+                      const est = estimateLoanBalance(l, new Date().toISOString().slice(0, 10));
+                      return (
+                        <div key={l.id} className="flex items-center justify-between text-xs font-mono mb-1" style={{ color: MUTE }}>
+                          <span>{l.name || t("apt_loan_name")}</span>
+                          <span style={{ color: INK, fontWeight: 600 }}>{t("apt_loans_remaining")}: {eur(est.balance)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
