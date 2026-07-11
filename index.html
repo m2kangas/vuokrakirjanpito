@@ -952,11 +952,18 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
 }
 
 /* ---------- Transaction form ---------- */
-function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, onClose, onSave }) {
-  const [form, setForm] = useState({
-    apartmentId: defaultApartmentId || apartments[0]?.id,
-    type: "income", category: "rent", date: new Date().toISOString().slice(0, 10), amount: "", description: "",
-  });
+function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, initial, onClose, onSave }) {
+  const [form, setForm] = useState(
+    initial
+      ? {
+          apartmentId: initial.apartmentId, type: initial.type, category: initial.category,
+          date: initial.date, amount: String(initial.amount), description: initial.description || "",
+        }
+      : {
+          apartmentId: defaultApartmentId || apartments[0]?.id,
+          type: "income", category: "rent", date: new Date().toISOString().slice(0, 10), amount: "", description: "",
+        }
+  );
   const [receiptFile, setReceiptFile] = useState(null);
   const [repeatMonthly, setRepeatMonthly] = useState(false);
   const [repeatEndMonth, setRepeatEndMonth] = useState("");
@@ -1011,15 +1018,19 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         setSaving(false);
         return;
       }
+    } else if (initial) {
+      attachment = {
+        attachmentFileId: initial.attachmentFileId, attachmentName: initial.attachmentName, attachmentUrl: initial.attachmentUrl,
+      };
     }
     onSave(
       { ...form, amount: Number(form.amount), ...attachment },
-      repeatMonthly ? { dayOfMonth: Number(form.date.slice(8, 10)), startMonth: form.date.slice(0, 7), endMonth: repeatEndMonth || null } : null
+      !initial && repeatMonthly ? { dayOfMonth: Number(form.date.slice(8, 10)), startMonth: form.date.slice(0, 7), endMonth: repeatEndMonth || null } : null
     );
   }
 
   return (
-    <Modal onClose={onClose} title="Add transaction">
+    <Modal onClose={onClose} title={initial ? "Edit transaction" : "Add transaction"}>
       <Field label="Apartment">
         <select className={inputCls} style={inputStyle} value={form.apartmentId}
           onChange={(e) => setForm({ ...form, apartmentId: e.target.value })}>
@@ -1027,7 +1038,14 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         </select>
       </Field>
 
-      <Field label="Receipt or invoice, optional (image or PDF)">
+      {initial && initial.attachmentName && !receiptFile && (
+        <div className="text-xs mb-2" style={{ color: MUTE }}>
+          Current receipt: {initial.attachmentUrl ? (
+            <a href={initial.attachmentUrl} target="_blank" rel="noreferrer" className="underline" style={{ color: TEAL }}>{initial.attachmentName}</a>
+          ) : initial.attachmentName}. Choosing a new file below replaces it.
+        </div>
+      )}
+      <Field label={initial ? "Replace receipt or invoice, optional (image or PDF)" : "Receipt or invoice, optional (image or PDF)"}>
         <input type="file" accept="image/*,application/pdf" className={inputCls} style={inputStyle}
           onChange={(e) => { setReceiptFile(e.target.files[0] || null); setScanError(""); }} />
       </Field>
@@ -1091,20 +1109,30 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
           placeholder="e.g. June rent, tenant Matti" onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </Field>
 
-      <label className="flex items-center gap-2 mb-3 text-sm" style={{ color: INK }}>
-        <input type="checkbox" checked={repeatMonthly} onChange={(e) => setRepeatMonthly(e.target.checked)} />
-        Repeat monthly from this date
-      </label>
-      {repeatMonthly && (
-        <Field label="Stop after month, optional (leave blank for no end)">
-          <input type="month" className={inputCls} style={inputStyle} value={repeatEndMonth}
-            onChange={(e) => setRepeatEndMonth(e.target.value)} />
-        </Field>
+      {initial && initial.recurringId && (
+        <div className="text-xs mb-3 px-3 py-2 rounded" style={{ background: "#EEF2E9", color: "#4A5C3D" }}>
+          This entry belongs to a recurring series. Editing it only changes this one month, manage the whole series
+          from the Recurring button in Transactions.
+        </div>
+      )}
+      {!initial && (
+        <>
+          <label className="flex items-center gap-2 mb-3 text-sm" style={{ color: INK }}>
+            <input type="checkbox" checked={repeatMonthly} onChange={(e) => setRepeatMonthly(e.target.checked)} />
+            Repeat monthly from this date
+          </label>
+          {repeatMonthly && (
+            <Field label="Stop after month, optional (leave blank for no end)">
+              <input type="month" className={inputCls} style={inputStyle} value={repeatEndMonth}
+                onChange={(e) => setRepeatEndMonth(e.target.value)} />
+            </Field>
+          )}
+        </>
       )}
 
       <button onClick={handleSave} disabled={!form.apartmentId || !(Number(form.amount) > 0) || saving}
         className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
-        {saving ? "Saving..." : "Save transaction"}
+        {saving ? "Saving..." : initial ? "Save changes" : "Save transaction"}
       </button>
     </Modal>
   );
@@ -1389,7 +1417,7 @@ function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProject
   );
 }
 
-function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onDelete, onManageRecurring, recurringCount, onBulkImport }) {
+function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onEdit, onDelete, onManageRecurring, recurringCount, onBulkImport }) {
   const nameFor = (id) => apartments.find((a) => a.id === id)?.name || "Unknown";
   const rows = transactions
     .filter((t) => new Date(t.date).getFullYear() === year)
@@ -1435,6 +1463,7 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
               <div className="font-mono text-sm w-28 text-right shrink-0" style={{ color: t.type === "income" ? GREEN : RUST }}>
                 {t.type === "income" ? "+" : "\u2212"}{eur(t.amount)}
               </div>
+              <button onClick={() => onEdit(t)} className="p-1 shrink-0 text-xs" style={{ color: TEAL }}>Edit</button>
               <button onClick={() => onDelete(t.id)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>Delete</button>
             </div>
           ))}
@@ -1647,6 +1676,7 @@ function App() {
   const [txApartmentFilter, setTxApartmentFilter] = useState("all");
   const [showApartmentForm, setShowApartmentForm] = useState(false);
   const [showTxForm, setShowTxForm] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [editingApartment, setEditingApartment] = useState(null);
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
@@ -1860,6 +1890,28 @@ function App() {
     setShowTxForm(false);
   }
   function deleteTransaction(id) { persist(null, transactions.filter((t) => t.id !== id), null); }
+
+  async function updateTransaction(id, data) {
+    let attachmentFields = {};
+    if (data.__uploadFile) {
+      try {
+        const receiptsFolderId = await findOrCreateFolder(folder.id, "Receipts");
+        const uploaded = await driveUploadBinary(receiptsFolderId, data.__uploadFile.name, data.__uploadFile.mimeType, data.__uploadFile.buffer);
+        attachmentFields = { attachmentFileId: uploaded.id, attachmentName: data.__uploadFile.name, attachmentUrl: uploaded.webViewLink || "" };
+      } catch (e) {
+        setError("Transaction will be saved, but the receipt upload failed: " + e.message);
+      }
+    } else {
+      attachmentFields = { attachmentFileId: data.attachmentFileId, attachmentName: data.attachmentName, attachmentUrl: data.attachmentUrl };
+    }
+    const clean = { ...data };
+    delete clean.__uploadFile;
+    const existing = transactions.find((t) => t.id === id);
+    const updated = { ...existing, ...clean, ...attachmentFields };
+    persist(null, transactions.map((t) => (t.id === id ? updated : t)), null);
+    setEditingTransaction(null);
+  }
+
   function updateRecurringTemplate(id, patch) {
     persist(null, null, recurringTemplates.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }
@@ -1952,7 +2004,7 @@ function App() {
         {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} apartmentTotalsProjected={apartmentTotalsProjected} onAddApartment={() => setShowApartmentForm(true)} />}
         {tab === "transactions" && (
           <TransactionsTab apartments={apartments} transactions={transactions} filterApartmentId={txApartmentFilter}
-            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onDelete={deleteTransaction}
+            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onEdit={(t) => setEditingTransaction(t)} onDelete={deleteTransaction}
             onManageRecurring={() => setShowRecurringModal(true)} recurringCount={recurringTemplates.filter((t) => t.active).length}
             onBulkImport={() => setShowBulkImport(true)} />
         )}
@@ -1971,6 +2023,11 @@ function App() {
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
           geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+      )}
+      {editingTransaction && (
+        <TransactionFormModal apartments={apartments} initial={editingTransaction}
+          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setEditingTransaction(null)}
+          onSave={(data) => updateTransaction(editingTransaction.id, data)} />
       )}
       {showRecurringModal && (
         <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
