@@ -213,7 +213,7 @@ const TRANSLATIONS = {
     apt_own_equity: "Your own invested equity, EUR, optional",
     apt_invest_note: "Debt-free price includes the apartment's share of company loans at purchase, ask for it from the kauppakirja or isannoitsijantodistus if unsure. Leave own equity blank to skip the cash-on-cash figure.",
     apt_analysis_button: "Profitability", apt_analysis_title: "Profitability analysis",
-    apt_analysis_intro: "Based on transactions recorded for {year}. This mirrors the standard Finnish asuntosijoittaminen formulas, not a guarantee of future returns.",
+    apt_analysis_intro: "A normalized full year for {year}: rent and vastikkeet are annualized at their current recurring rate, one-off costs are counted exactly once as actually recorded, never scaled up or down. This mirrors the standard Finnish asuntosijoittaminen formulas, not a guarantee of future returns.",
     apt_analysis_no_price: "Add a debt-free price or purchase price in Edit apartment to see yield percentages.",
     apt_analysis_yield_title: "Rental yield", apt_analysis_rent_income: "Rent income",
     apt_analysis_operating_costs: "Operating costs (excludes depreciation and loan service fees)",
@@ -316,7 +316,7 @@ const TRANSLATIONS = {
     apt_own_equity: "Sijoittamasi oma pääoma, EUR, valinnainen",
     apt_invest_note: "Velaton hinta sisältää asunnon osuuden yhtiön lainoista ostohetkellä, kysy tarvittaessa kauppakirjasta tai isännöitsijäntodistuksesta. Jätä oma pääoma tyhjäksi, jos et halua nähdä oman pääoman tuottoprosenttia.",
     apt_analysis_button: "Kannattavuus", apt_analysis_title: "Kannattavuuslaskelma",
-    apt_analysis_intro: "Perustuu vuodelle {year} kirjattuihin tapahtumiin. Noudattaa yleisiä suomalaisen asuntosijoittamisen laskentakaavoja, ei takaa tulevaa tuottoa.",
+    apt_analysis_intro: "Normalisoitu koko vuosi {year}: vuokra ja vastikkeet on vuositasoitettu nykyisellä toistuvalla tasolla, yksittäiset kulut lasketaan mukaan täsmälleen sen verran kuin ne on kirjattu, niitä ei kerrota eikä jaeta. Noudattaa yleisiä suomalaisen asuntosijoittamisen laskentakaavoja, ei takaa tulevaa tuottoa.",
     apt_analysis_no_price: "Lisää velaton hinta tai kauppahinta Muokkaa asuntoa -näkymässä nähdäksesi tuottoprosentit.",
     apt_analysis_yield_title: "Vuokratuotto", apt_analysis_rent_income: "Vuokratulot",
     apt_analysis_operating_costs: "Käyttökulut (ei sisällä poistoja eikä lainanhoitokuluja)",
@@ -720,10 +720,16 @@ function computeApartmentYear(apartment, transactions, year) {
 
 /* Kannattavuuslaskelma: gross/net yield, cash flow, and cash-on-cash return, using the standard
    Finnish asuntosijoittaminen formulas. Depreciation and loan service fees are excluded from the
-   yield's operating costs since they are non-cash or financing items, not running costs of the asset. */
+   yield's operating costs since they are non-cash or financing items, not running costs of the asset.
+   The base figures use a normalized full calendar year at the current recurring rate (rent and
+   vastikkeet annualized at their current monthly amount), not raw partial-year actuals, so a year
+   with only a few months recorded so far does not distort the yield. One-off, non-recurring costs
+   are counted exactly once as they actually happened, never scaled up or down. */
 const YIELD_EXCLUDED_FROM_OPERATING_COSTS = ["irtaimisto_poisto", "perusparannuksen_poisto", "kalustevahennys", "lainanhoitokulut"];
-function computeInvestmentAnalysis(apartment, transactions, year) {
-  const r = computeApartmentYear(apartment, transactions, year);
+function computeInvestmentAnalysis(apartment, transactions, recurringTemplates, year) {
+  const projected = projectedTransactionsForYear(recurringTemplates || [], transactions, year);
+  const normalized = [...transactions, ...projected];
+  const r = computeApartmentYear(apartment, normalized, year);
   const operatingCostCategories = r.deductibleCategories.filter((c) => YIELD_EXCLUDED_FROM_OPERATING_COSTS.indexOf(c.id) === -1);
   const operatingCosts = operatingCostCategories.reduce((s, c) => s + r.byCategory[c.id], 0);
   const debtFreePrice = Number(apartment.debtFreePrice) || Number(apartment.purchasePrice) || 0;
@@ -1648,8 +1654,8 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t 
 }
 
 /* ---------- Investment profitability analysis (kannattavuuslaskelma) ---------- */
-function InvestmentAnalysisModal({ apartment, transactions, year, t, lang, onClose }) {
-  const a = computeInvestmentAnalysis(apartment, transactions, year);
+function InvestmentAnalysisModal({ apartment, transactions, recurringTemplates, year, t, lang, onClose }) {
+  const a = computeInvestmentAnalysis(apartment, transactions, recurringTemplates, year);
   const hasPriceInfo = a.debtFreePrice > 0;
   return (
     <Modal onClose={onClose} title={`${t("apt_analysis_title")}: ${apartment.name}`}>
@@ -2570,7 +2576,7 @@ function App() {
       {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
       {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
       {analyzingApartment && (
-        <InvestmentAnalysisModal apartment={analyzingApartment} transactions={transactions} year={year} t={t} lang={language} onClose={() => setAnalyzingApartment(null)} />
+        <InvestmentAnalysisModal apartment={analyzingApartment} transactions={transactions} recurringTemplates={recurringTemplates} year={year} t={t} lang={language} onClose={() => setAnalyzingApartment(null)} />
       )}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
