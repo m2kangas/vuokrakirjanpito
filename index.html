@@ -38,113 +38,113 @@ const INCOME_CATEGORIES = [
 
 const EXPENSE_CATEGORIES = [
   { id: "hoitovastike", fi: "Hoitovastike", en: "Maintenance fee", section: "deductible",
-    note: "Fully deductible.", noteFi: "Vahennyskelpoinen kokonaan." },
+    note: "Fully deductible.", noteFi: "Vähennyskelpoinen kokonaan." },
   {
     id: "rahoitusvastike", fi: "Rahoitusvastike", en: "Financing fee", section: "deductible",
     note: "Deductible or capitalized depending on the apartment's financing fee setting. Set it once in the apartment's details.",
-    noteFi: "Vahennyskelpoisuus riippuu siita, tulouttaako taloyhtio tama vastikkeen kirjanpidossaan vai rahastoiko sen. Aseta valinta kerran asunnon tiedoissa.",
+    noteFi: "Vähennyskelpoisuus riippuu siitä, tulouttaako taloyhtiö tämän vastikkeen kirjanpidossaan vai rahastoiko sen. Aseta valinta kerran asunnon tiedoissa.",
   },
   {
     id: "erityisvastike", fi: "Erityisvastike", en: "Special charge, for example a building wide internet service", section: "deductible",
     note: "Deductible or capitalized depending on the apartment's special charge setting, same rule as rahoitusvastike. Confirm with the isannoitsija. Set it once in the apartment's details.",
-    noteFi: "Sama saanto kuin rahoitusvastikkeessa: vahennyskelpoisuus riippuu siita, tulouttaako taloyhtio tama vastikkeen vai rahastoiko sen. Varmista isannoitsijalta. Aseta valinta kerran asunnon tiedoissa.",
+    noteFi: "Sama sääntö kuin rahoitusvastikkeessa: vähennyskelpoisuus riippuu siitä, tulouttaako taloyhtiö tämän vastikkeen vai rahastoiko sen. Varmista isännöitsijältä. Aseta valinta kerran asunnon tiedoissa.",
   },
   { id: "vesimaksu", fi: "Vesimaksu", en: "Water charge", section: "deductible",
-    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
+    note: "Deductible.", noteFi: "Vähennyskelpoinen." },
   {
     id: "korjauskulut", fi: "Vuosikorjaus", en: "Annual repair costs", section: "deductible",
     note: "Deductible in full in the year paid. Use this when the work restores the apartment to its previous condition, for example fixing a leak or repainting.",
-    noteFi: "Vahennetaan kokonaan sen vuoden verotuksessa, jona meno on maksettu. Kayta tata, kun tyo palauttaa asunnon aiempaan kuntoon, esimerkiksi vuodon korjaus tai maalaus.",
+    noteFi: "Vähennetään kokonaan sen vuoden verotuksessa, jona meno on maksettu. Käytä tätä, kun työ palauttaa asunnon aiempaan kuntoon, esimerkiksi vuodon korjaus tai maalaus.",
   },
   {
     id: "perusparannus", fi: "Perusparannus", en: "Improvement or renovation", section: "capitalized",
     note: "Not deductible in the year paid. Use this when the work raises the apartment above its original standard. Default rule is straight line depreciation over 10 years, 10 percent per year, logged under Perusparannuksen poisto, or you can instead add the full amount to your acquisition cost at sale, not both. Confirm with Vero or your accountant if your situation differs.",
-    noteFi: "Ei vahennettava sen vuoden verotuksessa, jona meno on maksettu. Kayta tata, kun tyo nostaa asunnon tasoa yli aiemman kunnon. Yleissaanto on tasapoisto 10 vuoden aikana, 10 prosenttia vuodessa, merkitse Perusparannuksen poisto -kohtaan, tai vaihtoehtoisesti lisaa koko summa hankintamenoon myyntia varten, ei molempia. Varmista Verohallinnolta tai kirjanpitajalta, jos tilanteesi poikkeaa taman ohjeesta.",
+    noteFi: "Ei vähennettävä sen vuoden verotuksessa, jona meno on maksettu. Käytä tätä, kun työ nostaa asunnon tasoa yli aiemman kunnon. Yleissääntö on tasapoisto 10 vuoden aikana, 10 prosenttia vuodessa, merkitse Perusparannuksen poisto -kohtaan, tai vaihtoehtoisesti lisää koko summa hankintamenoon myyntiä varten, ei molempia. Varmista Verohallinnolta tai kirjanpitäjältä, jos tilanteesi poikkeaa tästä ohjeesta.",
   },
   {
     id: "perusparannuksen_poisto", fi: "Perusparannuksen poisto", en: "Depreciation of improvement costs", section: "deductible",
     note: "The standard method is 10 percent of the original improvement cost per year for 10 years. Enter this year's 10 percent instalment here.",
-    noteFi: "Yleissaanto on 10 prosentin tasapoisto alkuperaisesta perusparannusmenosta vuodessa, 10 vuoden ajan. Merkitse tahan taman vuoden 10 prosentin era.",
+    noteFi: "Yleissääntö on 10 prosentin tasapoisto alkuperäisestä perusparannusmenosta vuodessa, 10 vuoden ajan. Merkitse tähän tämän vuoden 10 prosentin erä.",
   },
   {
     id: "huoltopalvelut", fi: "Huolto- ja siivouspalvelut", en: "Maintenance and cleaning services", section: "deductible",
     note: "Deductible, for example cleaning, gardening, or snow removal that you pay for as the landlord.",
-    noteFi: "Vahennyskelpoinen, esimerkiksi siivous, pihatyot tai lumenluonti, jotka maksat vuokranantajana.",
+    noteFi: "Vähennyskelpoinen, esimerkiksi siivous, pihatyöt tai lumenluonti, jotka maksat vuokranantajana.",
   },
   {
-    id: "sahko_vesi_lammitys", fi: "Sahko, vesi ja lammitys", en: "Electricity, water and heating paid by landlord", section: "deductible",
+    id: "sahko_vesi_lammitys", fi: "Sähkö, vesi ja lämmitys", en: "Electricity, water and heating paid by landlord", section: "deductible",
     note: "Deductible when you pay these yourself rather than the tenant.",
-    noteFi: "Vahennyskelpoinen, kun maksat nama itse etka vuokralainen.",
+    noteFi: "Vähennyskelpoinen, kun maksat nämä itse etkä vuokralainen.",
   },
   {
     id: "internet_puhelin", fi: "Internet ja puhelin", en: "Internet and phone", section: "deductible",
     note: "Deductible only in limited cases, for example a connection you provide as part of the rental, or a measurable increase in your own costs from managing the rental. Keep this modest and be ready to justify it.",
-    noteFi: "Vahennyskelpoinen vain rajatuissa tapauksissa, esimerkiksi liittyman, jonka tarjoat osana vuokrausta, tai todennettavan lisayksen omissa kuluissasi vuokraustoiminnan hoitamisesta. Pida maara maltillisena ja varaudu perustelemaan se.",
+    noteFi: "Vähennyskelpoinen vain rajatuissa tapauksissa, esimerkiksi liittymän, jonka tarjoat osana vuokrausta, tai todennettavan lisäyksen omissa kuluissasi vuokraustoiminnan hoitamisesta. Pidä määrä maltillisena ja varaudu perustelemaan se.",
   },
   { id: "vakuutus", fi: "Vakuutus", en: "Insurance", section: "deductible",
-    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
+    note: "Deductible.", noteFi: "Vähennyskelpoinen." },
   {
-    id: "kiinteistovero", fi: "Kiinteistovero", en: "Real estate tax", section: "deductible",
+    id: "kiinteistovero", fi: "Kiinteistövero", en: "Real estate tax", section: "deductible",
     note: "Deductible when you pay it directly, relevant mainly for a directly owned rental property. Not normally paid separately for a housing company apartment, that is already inside the hoitovastike.",
-    noteFi: "Vahennyskelpoinen, kun maksat sen itse suoraan, koskee lahinna suoraan omistettua vuokrakohdetta. Asunto-osakkeessa kiinteistovero on tavallisesti mukana hoitovastikkeessa, ei erillinen meno.",
+    noteFi: "Vähennyskelpoinen, kun maksat sen itse suoraan, koskee lähinnä suoraan omistettua vuokrakohdetta. Asunto-osakkeessa kiinteistövero on tavallisesti mukana hoitovastikkeessa, ei erillinen meno.",
   },
   {
     id: "hallintokulut", fi: "Hallintokulut", en: "Administration costs", section: "deductible",
     note: "Deductible, for example bookkeeping, help preparing the rental income report, or a credit check on a prospective tenant.",
-    noteFi: "Vahennyskelpoinen, esimerkiksi kirjanpito, vuokratuloilmoituksen laadinnan apu tai vuokralaisehdokkaan luottotietojen tarkistus.",
+    noteFi: "Vähennyskelpoinen, esimerkiksi kirjanpito, vuokratuloilmoituksen laadinnan apu tai vuokralaisehdokkaan luottotietojen tarkistus.",
   },
   {
     id: "matkakulut", fi: "Matkakulut", en: "Travel costs", section: "deductible",
     note: "Deductible for necessary trips to show, inspect, or service the apartment.",
-    noteFi: "Vahennyskelpoinen valttamattomista matkoista, kuten asunnon esittely, tarkastus tai huolto.",
+    noteFi: "Vähennyskelpoinen välttämättömistä matkoista, kuten asunnon esittely, tarkastus tai huolto.",
   },
-  { id: "valityspalkkio", fi: "Valityspalkkio", en: "Rental agent fee", section: "deductible",
-    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
+  { id: "valityspalkkio", fi: "Välityspalkkio", en: "Rental agent fee", section: "deductible",
+    note: "Deductible.", noteFi: "Vähennyskelpoinen." },
   { id: "ilmoituskulut", fi: "Ilmoituskulut", en: "Advertising for tenant", section: "deductible",
-    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
+    note: "Deductible.", noteFi: "Vähennyskelpoinen." },
   {
-    id: "perinta_oikeudenkaynti", fi: "Perinta- ja oikeudenkaytikulut", en: "Rent collection and legal costs", section: "deductible",
+    id: "perinta_oikeudenkaynti", fi: "Perintä- ja oikeudenkäyntikulut", en: "Rent collection and legal costs", section: "deductible",
     note: "Deductible, for example costs of chasing unpaid rent or ending a tenancy.",
-    noteFi: "Vahennyskelpoinen, esimerkiksi maksamattoman vuokran perinnasta tai vuokrasuhteen paattamisesta aiheutuvat kulut.",
+    noteFi: "Vähennyskelpoinen, esimerkiksi maksamattoman vuokran perinnästä tai vuokrasuhteen päättämisestä aiheutuvat kulut.",
   },
   {
     id: "lainanhoitokulut", fi: "Lainanhoitokulut", en: "Loan service and arrangement fees", section: "deductible",
     note: "Deductible directly against rental income, unlike interest itself.",
-    noteFi: "Vahennetaan suoraan vuokratulosta, toisin kuin itse korot.",
+    noteFi: "Vähennetään suoraan vuokratulosta, toisin kuin itse korot.",
   },
   {
     id: "lainan_korot", fi: "Lainan korot", en: "Loan interest", section: "interest",
     note: "Not deducted directly against this apartment's rent. Reduces your total capital income in its own box, so it is reported separately. Only deductible if the rent charged is at least market rate.",
-    noteFi: "Ei vahenneta suoraan taman asunnon vuokratulosta, vaan omasta pääomatuloista vähennettävästä korkojen kohdasta erikseen. Vähennysoikeus edellyttää, että perit vuokralaiselta käyvän vuokran, muuten korkoja ei voi vähentää lainkaan.",
+    noteFi: "Ei vähennetä suoraan tämän asunnon vuokratulosta, vaan omasta pääomatuloista vähennettävästä korkojen kohdasta erikseen. Vähennysoikeus edellyttää, että perit vuokralaiselta käyvän vuokran, muuten korkoja ei voi vähentää lainkaan.",
   },
   {
     id: "irtaimisto_poisto", fi: "Irtaimiston poisto", en: "Depreciation of movables", section: "deductible",
     note: "Typically 25% per year on the remaining balance. Use this if you deduct the actual cost of furniture and appliances you bought for the apartment.",
-    noteFi: "Tavallisesti 25 prosentin menojaannospoisto vuodessa. Kayta tata, jos vahennat asuntoon ostamiesi kalusteiden ja kodinkoneiden todelliset hankintakustannukset.",
+    noteFi: "Tavallisesti 25 prosentin menojäännöspoisto vuodessa. Käytä tätä, jos vähennät asuntoon ostamiesi kalusteiden ja kodinkoneiden todelliset hankintakustannukset.",
   },
   {
-    id: "kalustevahennys", fi: "Kalustevahennys, kaavamainen", en: "Furnished apartment standard deduction", section: "deductible",
+    id: "kalustevahennys", fi: "Kalustevähennys, kaavamainen", en: "Furnished apartment standard deduction", section: "deductible",
     note: "A flat monthly amount Vero sets each year for a furnished apartment, as an alternative to tracking actual furniture and appliance costs. Use either this or Irtaimiston poisto for a given apartment and year, not both. Check the current euro amount on Vero's site before using this.",
-    noteFi: "Verohallinnon vuosittain vahvistama kiintea kuukausimaara kalustetulle asunnolle, vaihtoehtona todellisten kaluste- ja kodinkonekulujen seurannalle. Kayta taman tai Irtaimiston poisto -kohtaa samalle asunnolle ja vuodelle, ei molempia. Tarkista voimassa oleva euromaara vero.fi-sivulta.",
+    noteFi: "Verohallinnon vuosittain vahvistama kiinteä kuukausimäärä kalustetulle asunnolle, vaihtoehtona todellisten kaluste- ja kodinkonekulujen seurannalle. Käytä tämän tai Irtaimiston poisto -kohtaa samalle asunnolle ja vuodelle, ei molempia. Tarkista voimassa oleva euromäärä vero.fi-sivulta.",
   },
   { id: "muu_kulu", fi: "Muu kulu", en: "Other cost", section: "deductible",
-    note: "Deductible if it relates to the rental activity.", noteFi: "Vahennyskelpoinen, jos liittyy vuokraustoimintaan." },
+    note: "Deductible if it relates to the rental activity.", noteFi: "Vähennyskelpoinen, jos liittyy vuokraustoimintaan." },
 ];
 
 const CONFIGURABLE_SECTION = {
   rahoitusvastike: {
     settingKey: "rahoitusvastikeTreatment",
     options: [
-      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtio tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
-      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtio rahastoi vastikkeen tai kayttaa sen lainan lyhennykseen", section: "capitalized" },
+      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtiö tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtiö rahastoi vastikkeen tai käyttää sen lainan lyhennykseen", section: "capitalized" },
     ],
     defaultValue: "income",
   },
   erityisvastike: {
     settingKey: "erityisvastikeTreatment",
     options: [
-      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtio tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
-      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtio rahastoi vastikkeen tai kayttaa sen lainan lyhennykseen", section: "capitalized" },
+      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtiö tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtiö rahastoi vastikkeen tai käyttää sen lainan lyhennykseen", section: "capitalized" },
     ],
     defaultValue: "income",
   },
@@ -266,90 +266,90 @@ const TRANSLATIONS = {
   },
   fi: {
     nav_overview: "Yhteenveto", nav_transactions: "Tapahtumat", nav_apartments: "Asunnot", nav_tax: "Veroraportti",
-    btn_settings: "Asetukset", btn_reconnect: "Yhdista Google uudelleen",
-    btn_add: "Lisaa", btn_edit: "Muokkaa", btn_delete: "Poista", btn_save: "Tallenna", btn_save_changes: "Tallenna muutokset",
+    btn_settings: "Asetukset", btn_reconnect: "Yhdistä Google uudelleen",
+    btn_add: "Lisää", btn_edit: "Muokkaa", btn_delete: "Poista", btn_save: "Tallenna", btn_save_changes: "Tallenna muutokset",
     btn_cancel: "Peruuta",
-    overview_recorded: "Kirjattu tahan mennessa", overview_projected: "Ennuste koko vuodelle",
-    overview_projected_note: "Kirjatut tapahtumat plus aktiiviset toistuvat sarjat vietyna joulukuulle asti, olettaen etta ne jatkuvat kuten asetettu. Tama on ennuste, ei kirjanpito, veroraportti kayttaa aina vain todella kirjattuja tapahtumia.",
-    overview_total_income: "Tulot yhteensa", overview_total_costs: "Kulut yhteensa", overview_net_result: "Nettotulos",
+    overview_recorded: "Kirjattu tähän mennessä", overview_projected: "Ennuste koko vuodelle",
+    overview_projected_note: "Kirjatut tapahtumat plus aktiiviset toistuvat sarjat vietynä joulukuulle asti, olettaen että ne jatkuvat kuten asetettu. Tämä on ennuste, ei kirjanpito, veroraportti käyttää aina vain todella kirjattuja tapahtumia.",
+    overview_total_income: "Tulot yhteensä", overview_total_costs: "Kulut yhteensä", overview_net_result: "Nettotulos",
     overview_projected_income: "Ennustetut tulot", overview_projected_costs: "Ennustetut kulut", overview_projected_net: "Ennustettu netto",
     overview_by_apartment: "Asunnoittain", overview_projected_full_year_net: "Ennustettu koko vuoden netto",
-    overview_no_apartments_title: "Ei asuntoja vielä", overview_no_apartments_body: "Lisaa ensimmainen asunto aloittaaksesi vuokran ja kulujen seurannan.",
-    overview_add_apartment: "Lisaa asunto", overview_share: "oma osuutesi",
+    overview_no_apartments_title: "Ei asuntoja vielä", overview_no_apartments_body: "Lisää ensimmäinen asunto aloittaaksesi vuokran ja kulujen seurannan.",
+    overview_add_apartment: "Lisää asunto", overview_share: "oma osuutesi",
     tx_title: "Tapahtumat", tx_all_apartments: "Kaikki asunnot", tx_recurring: "Toistuvat",
-    tx_import_drive: "Tuo Drivesta",
-    tx_empty_no_apartments_title: "Lisaa asunto ensin", tx_empty_no_apartments_body: "Tapahtumat kuuluvat aina jollekin asunnolle.",
-    tx_empty_nothing_title: "Ei vielä tapahtumia", tx_empty_nothing_body: "Ei tapahtumia vuodelle {year} talla suodattimella.",
+    tx_import_drive: "Tuo Drivestä",
+    tx_empty_no_apartments_title: "Lisää asunto ensin", tx_empty_no_apartments_body: "Tapahtumat kuuluvat aina jollekin asunnolle.",
+    tx_empty_nothing_title: "Ei vielä tapahtumia", tx_empty_nothing_body: "Ei tapahtumia vuodelle {year} tällä suodattimella.",
     tx_recurring_tag: "toistuva", tx_receipt: "Kuitti",
-    apt_title: "Asunnot", apt_add: "Lisaa asunto", apt_edit: "Muokkaa asuntoa",
-    apt_empty_title: "Ei asuntoja vielä", apt_empty_body: "Lisaa yksi aloittaaksesi.",
-    apt_housing_company: "Taloyhtio", apt_your_share: "Oma osuutesi",
-    apt_field_name: "Nimi", apt_field_address: "Osoite", apt_field_company: "Taloyhtio",
+    apt_title: "Asunnot", apt_add: "Lisää asunto", apt_edit: "Muokkaa asuntoa",
+    apt_empty_title: "Ei asuntoja vielä", apt_empty_body: "Lisää yksi aloittaaksesi.",
+    apt_housing_company: "Taloyhtiö", apt_your_share: "Oma osuutesi",
+    apt_field_name: "Nimi", apt_field_address: "Osoite", apt_field_company: "Taloyhtiö",
     apt_field_share: "Omistusosuutesi, prosenttia", apt_field_notes: "Muistiinpanot, valinnainen",
-    apt_field_import_doc: "Tuo isannoitsijantodistuksesta tai vastaavasta asiakirjasta, valinnainen (kuva tai PDF)",
-    apt_fill_from_doc: "Tayta asiakirjasta Geminilla",
-    apt_loans_title: "Yhtion lainat (lainaosuudet), valinnainen",
+    apt_field_import_doc: "Tuo isännöitsijäntodistuksesta tai vastaavasta asiakirjasta, valinnainen (kuva tai PDF)",
+    apt_fill_from_doc: "Täytä asiakirjasta Geminillä",
+    apt_loans_title: "Yhtiön lainat (lainaosuudet), valinnainen",
     apt_loan_name: "Lainan nimi, esim. RL3 OP-448/Ikkunat",
-    apt_loan_balance: "Jaljella oleva maara, EUR", apt_loan_date: "Tilanne paivamaarana",
+    apt_loan_balance: "Jäljellä oleva määrä, EUR", apt_loan_date: "Tilanne päivämääränä",
     apt_loan_payment: "Kuukausierä, EUR", apt_loan_rate: "Korko, % vuodessa, valinnainen",
-    apt_loan_add: "Lisaa laina", apt_loan_note: "Jaljella oleva maara on arvio, laskettu eteenpain viitepaivamaarasta antamallasi erasuuruudella ja korolla, se ei tasmaa taysin pankin omaan laskentaan. Paivita tiedot aina, kun saat uuden isannoitsijantodistuksen.",
-    apt_loans_remaining: "Arvioitu jaljella oleva laina",
+    apt_loan_add: "Lisää laina", apt_loan_note: "Jäljellä oleva määrä on arvio, laskettu eteenpäin viitepäivämäärästä antamallasi eräsuuruudella ja korolla, se ei täsmää täysin pankin omaan laskentaan. Päivitä tiedot aina, kun saat uuden isännöitsijäntodistuksen.",
+    apt_loans_remaining: "Arvioitu jäljellä oleva laina",
     tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
     tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
-    tax_get_blank_form: "Hae tyhja 7H-lomake", tax_open_sheet: "Avaa Sheet",
-    tax_income_header: "Tulot", tax_deductible_header: "Vahennyskelpoiset kulut",
-    tax_total_income: "Vuokratulot yhteensa", tax_total_deductible: "Vahennyskelpoiset kulut yhteensa",
+    tax_get_blank_form: "Hae tyhjä 7H-lomake", tax_open_sheet: "Avaa Sheet",
+    tax_income_header: "Tulot", tax_deductible_header: "Vähennyskelpoiset kulut",
+    tax_total_income: "Vuokratulot yhteensä", tax_total_deductible: "Vähennyskelpoiset kulut yhteensä",
     tax_net_result: "Vuokratulon netto, 100%", tax_your_taxable_share: "Verotettava osuutesi",
-    tax_not_deductible: "Ei vahennyskelpoinen, lisatty hankintamenoon", tax_total_added: "Hankintamenoon lisatty yhteensa",
-    tax_interest_header: "Lainan korot, ilmoitetaan erikseen", tax_total_interest: "Lainan korot yhteensa",
+    tax_not_deductible: "Ei vähennyskelpoinen, lisätty hankintamenoon", tax_total_added: "Hankintamenoon lisätty yhteensä",
+    tax_interest_header: "Lainan korot, ilmoitetaan erikseen", tax_total_interest: "Lainan korot yhteensä",
     tax_interest_share: "Korkojen verotettava osuutesi",
-    tax_projected_header: "Ennuste koko vuodelle, sisaltaa suunnitellut toistuvat, ei ilmoitukseen",
-    tax_projected_income: "Ennustetut vuokratulot yhteensa", tax_projected_deductible: "Ennustetut vahennyskelpoiset kulut yhteensa",
+    tax_projected_header: "Ennuste koko vuodelle, sisältää suunnitellut toistuvat, ei ilmoitukseen",
+    tax_projected_income: "Ennustetut vuokratulot yhteensä", tax_projected_deductible: "Ennustetut vähennyskelpoiset kulut yhteensä",
     tax_projected_net: "Ennustettu netto, 100%", tax_projected_share: "Ennustettu verotettava osuus",
     settings_title: "Asetukset", settings_save: "Tallenna muutokset", settings_saved: "Tallennettu",
     settings_current_folder: "Nykyinen Drive-kansio", settings_change_folder: "Vaihda Drive-kansiota",
-    settings_sign_out: "Kirjaudu ulos Googlesta", settings_reset: "Nollaa kaikki talla laitteella",
-    recurring_title: "Toistuvat tapahtumat", recurring_pause: "Keskeyta", recurring_resume: "Jatka", recurring_delete: "Poista sarja",
-    bulk_title: "Tuo kuitteja Drivesta", bulk_pick_file: "Valitse tiedosto", bulk_pick_folder: "Valitse kansio",
+    settings_sign_out: "Kirjaudu ulos Googlesta", settings_reset: "Nollaa kaikki tällä laitteella",
+    recurring_title: "Toistuvat tapahtumat", recurring_pause: "Keskeytä", recurring_resume: "Jatka", recurring_delete: "Poista sarja",
+    bulk_title: "Tuo kuitteja Drivestä", bulk_pick_file: "Valitse tiedosto", bulk_pick_folder: "Valitse kansio",
     field_apartment: "Asunto", field_receipt: "Kuitti tai lasku, valinnainen (kuva tai PDF)",
     field_receipt_replace: "Korvaa kuitti tai lasku, valinnainen (kuva tai PDF)",
-    field_category: "Kategoria", field_date: "Paivamaara", field_amount: "Maara, EUR", field_description: "Kuvaus, valinnainen",
+    field_category: "Kategoria", field_date: "Päivämäärä", field_amount: "Määrä, EUR", field_description: "Kuvaus, valinnainen",
     income: "Tulo", cost: "Kulu",
-    modal_add_transaction: "Lisaa tapahtuma", modal_edit_transaction: "Muokkaa tapahtumaa",
-    word_deductible: "vahennyskelpoinen", word_capitalized: "hankintamenoon",
-    apt_field_company_id: "Taloyhtion Y-tunnus, valinnainen", apt_field_unit_number: "Huoneiston numero, valinnainen",
-    apt_field_rv_treatment: "Miten taloyhtio kirjaa rahoitusvastikkeen",
-    apt_field_ev_description: "Erityisvastike, mita se kattaa, jata tyhjaksi jos ei ole",
-    apt_field_ev_treatment: "Miten taloyhtio kirjaa erityisvastikkeen",
+    modal_add_transaction: "Lisää tapahtuma", modal_edit_transaction: "Muokkaa tapahtumaa",
+    word_deductible: "vähennyskelpoinen", word_capitalized: "hankintamenoon",
+    apt_field_company_id: "Taloyhtiön Y-tunnus, valinnainen", apt_field_unit_number: "Huoneiston numero, valinnainen",
+    apt_field_rv_treatment: "Miten taloyhtiö kirjaa rahoitusvastikkeen",
+    apt_field_ev_description: "Erityisvastike, mitä se kattaa, jätä tyhjäksi jos ei ole",
+    apt_field_ev_treatment: "Miten taloyhtiö kirjaa erityisvastikkeen",
     tx_current_receipt: "Nykyinen kuitti", tx_replaces_note: "Uuden tiedoston valitseminen alla korvaa sen.",
-    tx_reading_receipt: "Luetaan kuittia...", tx_fill_from_receipt: "Tayta kuitista Geminilla",
-    tx_review_note: "Tarkista alla olevat tiedot ennen tallennusta, tama on paras arvaus.",
-    tx_add_gemini_key_note: "Lisaa Gemini API -avain kerran, jotta kuittien automaattinen tayttäminen toimii.",
+    tx_reading_receipt: "Luetaan kuittia...", tx_fill_from_receipt: "Täytä kuitista Geminillä",
+    tx_review_note: "Tarkista alla olevat tiedot ennen tallennusta, tämä on paras arvaus.",
+    tx_add_gemini_key_note: "Lisää Gemini API -avain kerran, jotta kuittien automaattinen täyttäminen toimii.",
     tx_save_gemini_key: "Tallenna Gemini-avain",
-    tx_recurring_edit_note: "Tama tapahtuma kuuluu toistuvaan sarjaan. Muokkaus vaikuttaa vain tahan kuukauteen, hallitse koko sarjaa Tapahtumat-valilehden Toistuvat-painikkeesta.",
-    tx_repeat_monthly: "Toistu kuukausittain tasta paivasta",
-    tx_stop_after_month: "Lopeta kuukauden jalkeen, valinnainen (jata tyhjaksi jos ei loppupaivaa)",
+    tx_recurring_edit_note: "Tämä tapahtuma kuuluu toistuvaan sarjaan. Muokkaus vaikuttaa vain tähän kuukauteen, hallitse koko sarjaa Tapahtumat-välilehden Toistuvat-painikkeesta.",
+    tx_repeat_monthly: "Toistu kuukausittain tästä päivästä",
+    tx_stop_after_month: "Lopeta kuukauden jälkeen, valinnainen (jätä tyhjäksi jos ei loppupäivää)",
     tx_saving: "Tallennetaan...",
-    tax_banner: "Rakenne noudattaa Suomen vuokratulojen veroilmoitusta (lomake 7H, lomakenumero 3011). Vuosikorjaus on kokonaan vahennyskelpoinen sen vuoden verotuksessa, jona se maksettiin, kun taas perusparannus ei ole, se poistetaan 10 vuoden aikana tai lisataan hankintamenoon. Lainan korot esitetaan erikseen: ne vahennetaan omasta pääomatulojen korko-kohdasta, ei suoraan taman asunnon vuokratulosta, ja Verohallinnon saannon mukaan korkoja ei voi vahentaa lainkaan, jos perimasi vuokra alittaa käyvän vuokran. PDF-yhteenveto noudattaa virallisen lomakkeen viittä numeroitua kohtaa asuntoa kohden, hoitovastike ja vesimaksu yhdistyvat lomakkeella yhdeksi riviksi, samoin kuin Verohallinnon omassa lomakkeessa. Tama raportti laskee ainoastaan todella kirjatut tapahtumat, ei suunniteltuja toistuvia tapahtumia, jotka ovat vielä tulevaisuudessa, se koko vuoden ennustenakyma loytyy Yhteenveto-valilehdelta. Tama on lahtokohta omaa ilmoitustasi varten, ei veroneuvontaa.",
-    setup_title: "Vuokrakirjanpito, kayttoonotto", setup_intro: "Tama toimii kokonaan selaimessasi ja tallentaa tiedot omaan Google Driveesi. Mikaan ei kulje muun palvelimen kautta.",
-    setup_client_id: "Google OAuth Client ID", setup_api_key: "Google API -avain", setup_email: "Google-tilisi sahkopostiosoite",
-    setup_email_note: "Kirjautumisen jalkeen sovellus tarkistaa, etta kirjautunut tili vastaa tata osoitetta, ja kirjaa muut ulos. Tama on mukavuustarkistus, ei varsinainen turvaraja, se on Googlen omassa kirjautumisessa ja OAuth-suostumusnaytön testikayttajalistalla.",
-    setup_save: "Tallenna", setup_connect: "Yhdista Google Drive", setup_loading_google: "Ladataan Googlea...",
-    setup_choose_folder: "Valitse tai luo Drive-kansio", setup_or_paste: "tai, jos tama ei toimi tassa",
-    setup_paste_folder_link: "Liita Google Drive -kansion linkki", setup_checking: "Tarkistetaan...", setup_use_this_folder: "Kayta tata kansiota",
-    setup_paste_note: "Avaa kansio Google Drivessa (sovellus tai selain), napauta Jaa tai osoiterivia, kopioi linkki, liita se tahan. Tama kayttaa Drive-yhteyttasi suoraan ja ohittaa Googlen kansiovalitsimen, hyodyllinen jos valitsin ei toimi selaimessasi, mika on yleisempaa mobiilissa.",
+    tax_banner: "Rakenne noudattaa Suomen vuokratulojen veroilmoitusta (lomake 7H, lomakenumero 3011). Vuosikorjaus on kokonaan vähennyskelpoinen sen vuoden verotuksessa, jona se maksettiin, kun taas perusparannus ei ole, se poistetaan 10 vuoden aikana tai lisätään hankintamenoon. Lainan korot esitetään erikseen: ne vähennetään omasta pääomatulojen korko-kohdasta, ei suoraan tämän asunnon vuokratulosta, ja Verohallinnon säännön mukaan korkoja ei voi vähentää lainkaan, jos perimäsi vuokra alittaa käyvän vuokran. PDF-yhteenveto noudattaa virallisen lomakkeen viittä numeroitua kohtaa asuntoa kohden, hoitovastike ja vesimaksu yhdistyvät lomakkeella yhdeksi riviksi, samoin kuin Verohallinnon omassa lomakkeessa. Tämä raportti laskee ainoastaan todella kirjatut tapahtumat, ei suunniteltuja toistuvia tapahtumia, jotka ovat vielä tulevaisuudessa, se koko vuoden ennustenäkymä löytyy Yhteenveto-välilehdeltä. Tämä on lähtökohta omaa ilmoitustasi varten, ei veroneuvontaa.",
+    setup_title: "Vuokrakirjanpito, käyttöönotto", setup_intro: "Tämä toimii kokonaan selaimessasi ja tallentaa tiedot omaan Google Driveesi. Mikään ei kulje muun palvelimen kautta.",
+    setup_client_id: "Google OAuth Client ID", setup_api_key: "Google API -avain", setup_email: "Google-tilisi sähköpostiosoite",
+    setup_email_note: "Kirjautumisen jälkeen sovellus tarkistaa, että kirjautunut tili vastaa tätä osoitetta, ja kirjaa muut ulos. Tämä on mukavuustarkistus, ei varsinainen turvaraja, se on Googlen omassa kirjautumisessa ja OAuth-suostumusnäytön testikäyttäjälistalla.",
+    setup_save: "Tallenna", setup_connect: "Yhdistä Google Drive", setup_loading_google: "Ladataan Googlea...",
+    setup_choose_folder: "Valitse tai luo Drive-kansio", setup_or_paste: "tai, jos tämä ei toimi tässä",
+    setup_paste_folder_link: "Liitä Google Drive -kansion linkki", setup_checking: "Tarkistetaan...", setup_use_this_folder: "Käytä tätä kansiota",
+    setup_paste_note: "Avaa kansio Google Drivessa (sovellus tai selain), napauta Jaa tai osoiterivia, kopioi linkki, liitä se tähän. Tämä käyttää Drive-yhteyttäsi suoraan ja ohittaa Googlen kansiovalitsimen, hyödyllinen jos valitsin ei toimi selaimessasi, mikä on yleisempää mobiilissa.",
     setup_reset_creds: "Nollaa kirjautumistiedot",
-    loading_from_drive: "Ladataan Drivesta...",
+    loading_from_drive: "Ladataan Drivestä...",
     recurring_empty: "Ei toistuvia sarjoja vielä. Valitse \"Toistu kuukausittain\" tapahtumaa lisätessäsi aloittaaksesi.",
-    bulk_gemini_needed: "Lisaa Gemini API -avain ensin Asetuksista, sita tarvitaan kuittien lukemiseen.",
-    bulk_scan_note: "Kansio luetaan vain yhden tason syvyydelta, sen alikansioita ei kayda lapi. Mitaan ei tallenneta ennen kuin tarkistat listan alla ja painat Tuo.",
-    bulk_include: "Sisallyta", bulk_remove: "Poista", bulk_choose_apartment: "Valitse asunto",
+    bulk_gemini_needed: "Lisää Gemini API -avain ensin Asetuksista, sitä tarvitaan kuittien lukemiseen.",
+    bulk_scan_note: "Kansio luetaan vain yhden tason syvyydeltä, sen alikansioita ei käydä läpi. Mitään ei tallenneta ennen kuin tarkistat listan alla ja painat Tuo.",
+    bulk_include: "Sisällytä", bulk_remove: "Poista", bulk_choose_apartment: "Valitse asunto",
     bulk_import_n: "Tuo {n} tapahtuma(a)",
-    settings_reconnect_note: "Jos vaihdoit Client ID:n tai Google API -avaimen, paina Yhdista Google uudelleen -painiketta ylhaalla.",
-    settings_or_paste: "tai, jos valitsin ei toimi tassa",
-    settings_paste_folder_link: "Liita Google Drive -kansion linkki",
-    settings_use_this_folder: "Kayta tata kansiota", settings_checking: "Tarkistetaan...",
-    settings_reset_confirm: "Tama tyhjentaa kaikki tallennetut kirjautumistiedot ja kansiolinkin talla laitteella. Tietojasi Drivessa ei poisteta. Jatketaanko?",
+    settings_reconnect_note: "Jos vaihdoit Client ID:n tai Google API -avaimen, paina Yhdistä Google uudelleen -painiketta ylhäällä.",
+    settings_or_paste: "tai, jos valitsin ei toimi tässä",
+    settings_paste_folder_link: "Liitä Google Drive -kansion linkki",
+    settings_use_this_folder: "Käytä tätä kansiota", settings_checking: "Tarkistetaan...",
+    settings_reset_confirm: "Tämä tyhjentää kaikki tallennetut kirjautumistiedot ja kansiolinkin tällä laitteella. Tietojasi Drivessä ei poisteta. Jatketaanko?",
   },
 };
 function makeT(lang) {
@@ -712,26 +712,26 @@ async function generate7HSummaryPdf(apartments, transactions, year, filerName) {
     y -= opts.gap ?? 15;
   }
   line("7H VUOKRATULOT - OSAKEHUONEISTOT, yhteenveto", { bold: true, size: 13, gap: 20 });
-  line("Tama on avustava yhteenveto sovelluksesta, ei virallinen skannattava vero.fi-lomake.", { size: 8, gap: 10 });
+  line("Tämä on avustava yhteenveto sovelluksesta, ei virallinen skannattava vero.fi-lomake.", { size: 8, gap: 10 });
   line("Kopioi luvut OmaVeroon tai viralliselle 7H-lomakkeelle (vero.fi/omavero).", { size: 8, gap: 20 });
   line(`Verovuosi: ${year}`, { size: 11 });
   line(`Nimi: ${filerName || "________________________________"}`, { size: 11 });
-  line("Henkilotunnus: ________________________ (taydenna itse)", { size: 10, gap: 22 });
+  line("Henkilötunnus: ________________________ (täydennä itse)", { size: 10, gap: 22 });
 
   for (const a of apartments) {
     const lines = get7HLines(a, transactions, year);
     ensureRoom(190);
     line(a.name, { bold: true, size: 12, gap: 16 });
-    line(`Asunto- tai kiinteistoosakeyhtion nimi: ${a.housingCompany || "________________________"}`, { size: 9 });
+    line(`Asunto- tai kiinteistöosakeyhtiön nimi: ${a.housingCompany || "________________________"}`, { size: 9 });
     line(`Y-tunnus: ${a.companyId || "____________"}      Huoneiston numero: ${a.unitNumber || "______"}`, { size: 9 });
     line(`Omistusosuutesi asunnosta (%): ${a.sharePercent ?? 100}`, { size: 9, gap: 16 });
-    line(`2.1  Vuokratulojen maara koko vuonna (oma osuus, brutto): ${eur(lines.line21)}`, { size: 9.5 });
+    line(`2.1  Vuokratulojen määrä koko vuonna (oma osuus, brutto): ${eur(lines.line21)}`, { size: 9.5 });
     line(`2.2  Hoitovastikkeet ja vesimaksut (oma osuus): ${eur(lines.line22)}`, { size: 9.5 });
-    line(`2.3  Yhtion tulouttamat paaomavastikkeet (oma osuus): ${eur(lines.line23)}`, { size: 9.5 });
+    line(`2.3  Yhtiön tulouttamat pääomavastikkeet (oma osuus): ${eur(lines.line23)}`, { size: 9.5 });
     line(`2.4  Vuosikorjausten kulut (oma osuus): ${eur(lines.line24)}`, { size: 9.5 });
     line(`2.5  Muut kulut (oma osuus): ${eur(lines.line25)}`, { size: 9.5, gap: 20 });
     if (lines.r.capitalizedTotal !== 0) {
-      line(`Ei talla lomakkeella, lisatty hankintamenoon: ${eur(lines.r.capitalizedTotal)}`, { size: 8, gap: 12 });
+      line(`Ei tällä lomakkeella, lisätty hankintamenoon: ${eur(lines.r.capitalizedTotal)}`, { size: 8, gap: 12 });
     }
     if (lines.r.interestTotal !== 0) {
       line(`Lainan korot, oma osuus (ilmoitetaan erikseen tulonhankkimisvelan korkoina): ${eur(lines.r.interestTotal * ((a.sharePercent ?? 100) / 100))}`, { size: 8, gap: 12 });
@@ -1194,7 +1194,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         loans: scannedLoans.length ? scannedLoans : (form.loans || []),
       });
     } catch (e) {
-      setDocError((lang === "fi" ? "Asiakirjan lukeminen epaonnistui: " : "Could not read the document: ") + e.message);
+      setDocError((lang === "fi" ? "Asiakirjan lukeminen epäonnistui: " : "Could not read the document: ") + e.message);
     }
     setDocScanning(false);
   }
@@ -1381,7 +1381,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         description: extracted.description || form.description,
       });
     } catch (e) {
-      setScanError((lang === "fi" ? "Kuitin lukeminen epaonnistui: " : "Could not read the receipt: ") + e.message);
+      setScanError((lang === "fi" ? "Kuitin lukeminen epäonnistui: " : "Could not read the receipt: ") + e.message);
     }
     setScanning(false);
   }
@@ -1395,7 +1395,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         const buf = await receiptFile.arrayBuffer();
         attachment = { __uploadFile: { name: receiptFile.name, mimeType: receiptFile.type || "application/octet-stream", buffer: buf } };
       } catch (e) {
-        setScanError((lang === "fi" ? "Liitteen lukeminen epaonnistui: " : "Could not read the file to attach: ") + e.message);
+        setScanError((lang === "fi" ? "Liitteen lukeminen epäonnistui: " : "Could not read the file to attach: ") + e.message);
         setSaving(false);
         return;
       }
@@ -1688,7 +1688,7 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, 
                 <div className="text-xs font-medium truncate" style={{ color: INK }}>{it.fileName}</div>
                 <div className="flex items-center gap-2 shrink-0">
                   {it.status === "pending" && <span className="text-xs" style={{ color: MUTE }}>{t("tx_reading_receipt")}</span>}
-                  {it.status === "error" && <span className="text-xs" style={{ color: RUST }}>{lang === "fi" ? "Epaonnistui" : "Failed"}</span>}
+                  {it.status === "error" && <span className="text-xs" style={{ color: RUST }}>{lang === "fi" ? "Epäonnistui" : "Failed"}</span>}
                   <button onClick={() => removeItem(it.key)} type="button" className="text-xs" style={{ color: MUTE }}>{t("bulk_remove")}</button>
                 </div>
               </div>
