@@ -199,6 +199,8 @@ const TRANSLATIONS = {
     apt_housing_company: "Housing company", apt_your_share: "Your share",
     apt_field_name: "Name", apt_field_address: "Address", apt_field_company: "Housing company",
     apt_field_share: "Your ownership share, percent", apt_field_notes: "Notes, optional",
+    apt_field_import_doc: "Import from isannoitsijantodistus or similar document, optional (image or PDF)",
+    apt_fill_from_doc: "Fill from document with Gemini",
     tax_title: "Tax report", tax_all_separate: "All apartments, separate",
     tax_export_csv: "Export CSV", tax_download_pdf: "Download 7H summary PDF", tax_building_pdf: "Building PDF...",
     tax_get_blank_form: "Get blank 7H form", tax_open_sheet: "Open Sheet",
@@ -278,6 +280,8 @@ const TRANSLATIONS = {
     apt_housing_company: "Taloyhtio", apt_your_share: "Oma osuutesi",
     apt_field_name: "Nimi", apt_field_address: "Osoite", apt_field_company: "Taloyhtio",
     apt_field_share: "Omistusosuutesi, prosenttia", apt_field_notes: "Muistiinpanot, valinnainen",
+    apt_field_import_doc: "Tuo isannoitsijantodistuksesta tai vastaavasta asiakirjasta, valinnainen (kuva tai PDF)",
+    apt_fill_from_doc: "Tayta asiakirjasta Geminilla",
     tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
     tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
     tax_get_blank_form: "Hae tyhja 7H-lomake", tax_open_sheet: "Avaa Sheet",
@@ -581,6 +585,30 @@ async function extractReceiptWithGemini(apiKey, base64, mimeType) {
     '{"type":"income"|"expense","category":"<one id from the list below>","date":"YYYY-MM-DD","amount":<plain number, EUR>,"description":"<short text, vendor or purpose>"}\n' +
     "Category ids you must choose from:\n" + categoryList + "\n" +
     'If unsure of category, use "muu_kulu" for costs or "other_income" for income. Amount must be a plain number with no currency symbol.';
+  const body = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }] };
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "Gemini request failed");
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
+async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
+  const prompt =
+    "You are extracting structured facts about a Finnish housing company apartment (asunto-osake) from an " +
+    "isannoitsijantodistus (certificate from the property manager) or a similar official document. Return ONLY " +
+    "compact JSON, no markdown, no explanation, matching exactly this shape:\n" +
+    '{"housingCompany":"<official name of the asunto-osakeyhtio, or empty string>",' +
+    '"companyId":"<Y-tunnus in format 1234567-8, or empty string if not found>",' +
+    '"unitNumber":"<huoneiston numero or tunnus, or empty string>",' +
+    '"address":"<street address of the apartment if stated, or empty string>",' +
+    '"summary":"<one or two sentence summary in Finnish of other key facts found in the document, for example pinta-ala, hoitovastike euro per kk, rahoitusvastike euro per kk, or yhtiolainaosuus, or empty string if nothing else relevant is stated>"}\n' +
+    "Do not guess or invent values that are not explicitly stated in the document, use an empty string instead.";
   const body = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }] };
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
     method: "POST",
@@ -1071,7 +1099,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
 }
 
 /* ---------- Apartment form ---------- */
-function ApartmentFormModal({ initial, onClose, onSave, t, lang }) {
+function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, onSaveGeminiKey }) {
   const [form, setForm] = useState(
     initial || {
       name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
@@ -1082,8 +1110,62 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang }) {
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
   const evConfig = CONFIGURABLE_SECTION.erityisvastike;
   const optLabel = (o) => (lang === "fi" ? o.labelFi : o.label);
+  const [docFile, setDocFile] = useState(null);
+  const [docScanning, setDocScanning] = useState(false);
+  const [docError, setDocError] = useState("");
+  const [geminiKeyInput, setGeminiKeyInput] = useState("");
+
+  async function scanDocument() {
+    if (!docFile) return;
+    setDocScanning(true);
+    setDocError("");
+    try {
+      const buf = await docFile.arrayBuffer();
+      const base64 = arrayBufferToBase64(buf);
+      const extracted = await extractApartmentInfoWithGemini(geminiApiKey, base64, docFile.type || "application/pdf");
+      setForm({
+        ...form,
+        housingCompany: extracted.housingCompany || form.housingCompany,
+        companyId: extracted.companyId || form.companyId,
+        unitNumber: extracted.unitNumber || form.unitNumber,
+        address: extracted.address || form.address,
+        notes: extracted.summary ? (form.notes ? `${form.notes}\n${extracted.summary}` : extracted.summary) : form.notes,
+      });
+    } catch (e) {
+      setDocError((lang === "fi" ? "Asiakirjan lukeminen epaonnistui: " : "Could not read the document: ") + e.message);
+    }
+    setDocScanning(false);
+  }
+
   return (
     <Modal onClose={onClose} title={initial ? t("apt_edit") : t("apt_add")}>
+      <Field label={t("apt_field_import_doc")}>
+        <input type="file" accept="image/*,application/pdf" className={inputCls} style={inputStyle}
+          onChange={(e) => { setDocFile(e.target.files[0] || null); setDocError(""); }} />
+      </Field>
+      {docFile && geminiApiKey && (
+        <div className="mb-3">
+          <button onClick={scanDocument} disabled={docScanning} type="button"
+            className="w-full py-2 rounded text-sm font-medium border disabled:opacity-50"
+            style={{ borderColor: TEAL, color: TEAL }}>
+            {docScanning ? t("tx_reading_receipt") : t("apt_fill_from_doc")}
+          </button>
+          {docError && <div className="text-xs mt-1" style={{ color: RUST }}>{docError}</div>}
+          <div className="text-xs mt-1" style={{ color: MUTE }}>{t("tx_review_note")}</div>
+        </div>
+      )}
+      {docFile && !geminiApiKey && (
+        <div className="mb-3 px-3 py-2 rounded border" style={{ borderColor: LINE }}>
+          <div className="text-xs mb-2" style={{ color: MUTE }}>{t("tx_add_gemini_key_note")}</div>
+          <input className={inputCls} style={inputStyle} value={geminiKeyInput} placeholder="AIza... (from Google AI Studio)"
+            onChange={(e) => setGeminiKeyInput(e.target.value)} />
+          <button type="button" onClick={() => geminiKeyInput.trim() && onSaveGeminiKey(geminiKeyInput.trim())}
+            disabled={!geminiKeyInput.trim()} className="w-full mt-2 py-1.5 rounded text-xs font-medium disabled:opacity-40"
+            style={{ background: TEAL, color: "#fff" }}>
+            {t("tx_save_gemini_key")}
+          </button>
+        </div>
+      )}
       <Field label={t("apt_field_name")}>
         <input className={inputCls} style={inputStyle} value={form.name} placeholder="e.g. Mannynkerkko 2h"
           onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -2218,8 +2300,8 @@ function App() {
         )}
       </main>
 
-      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} lang={language} />}
-      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} lang={language} />}
+      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
+      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
           geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} t={t} lang={language} />
