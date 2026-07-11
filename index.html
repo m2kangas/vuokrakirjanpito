@@ -153,6 +153,105 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const eur = (n) => (n || 0).toLocaleString("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 const dateFmt = (iso) => new Date(iso).toLocaleDateString("fi-FI", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+/* ---------- translations ---------- */
+const TRANSLATIONS = {
+  en: {
+    nav_overview: "Overview", nav_transactions: "Transactions", nav_apartments: "Apartments", nav_tax: "Tax report",
+    btn_settings: "Settings", btn_reconnect: "Reconnect Google",
+    btn_add: "Add", btn_edit: "Edit", btn_delete: "Delete", btn_save: "Save", btn_save_changes: "Save changes",
+    btn_cancel: "Cancel",
+    overview_recorded: "Recorded so far", overview_projected: "Projected full year",
+    overview_projected_note: "Recorded transactions plus your active recurring series carried through December, assuming they continue exactly as set up. This is a budget, not a record, the Tax report only ever uses what is actually recorded.",
+    overview_total_income: "Total income", overview_total_costs: "Total costs", overview_net_result: "Net result",
+    overview_projected_income: "Projected income", overview_projected_costs: "Projected costs", overview_projected_net: "Projected net",
+    overview_by_apartment: "By apartment", overview_projected_full_year_net: "Projected full year net",
+    overview_no_apartments_title: "No apartments yet", overview_no_apartments_body: "Add the first apartment to start recording its rent and costs.",
+    overview_add_apartment: "Add apartment", overview_share: "your share",
+    tx_title: "Transactions", tx_all_apartments: "All apartments", tx_recurring: "Recurring",
+    tx_import_drive: "Import from Drive",
+    tx_empty_no_apartments_title: "Add an apartment first", tx_empty_no_apartments_body: "Transactions belong to an apartment.",
+    tx_empty_nothing_title: "Nothing recorded yet", tx_empty_nothing_body: "No transactions for {year} with this filter.",
+    tx_recurring_tag: "recurring", tx_receipt: "Receipt",
+    apt_title: "Apartments", apt_add: "Add apartment", apt_edit: "Edit apartment",
+    apt_empty_title: "No apartments yet", apt_empty_body: "Add one to begin.",
+    apt_housing_company: "Housing company", apt_your_share: "Your share",
+    apt_field_name: "Name", apt_field_address: "Address", apt_field_company: "Housing company",
+    apt_field_share: "Your ownership share, percent", apt_field_notes: "Notes, optional",
+    tax_title: "Tax report", tax_all_separate: "All apartments, separate",
+    tax_export_csv: "Export CSV", tax_download_pdf: "Download 7H summary PDF", tax_building_pdf: "Building PDF...",
+    tax_get_blank_form: "Get blank 7H form", tax_open_sheet: "Open Sheet",
+    tax_income_header: "Income", tax_deductible_header: "Deductible costs",
+    tax_total_income: "Total rental income", tax_total_deductible: "Total deductible costs",
+    tax_net_result: "Net rental result, 100%", tax_your_taxable_share: "Your taxable share",
+    tax_not_deductible: "Not deductible, added to acquisition cost", tax_total_added: "Total added to acquisition cost",
+    tax_interest_header: "Loan interest, reported separately", tax_total_interest: "Total loan interest",
+    tax_interest_share: "Your taxable share of the interest",
+    tax_projected_header: "Projected full year, includes planned recurring, not for filing",
+    tax_projected_income: "Projected total rental income", tax_projected_deductible: "Projected total deductible costs",
+    tax_projected_net: "Projected net rental result, 100%", tax_projected_share: "Projected taxable share",
+    settings_title: "Settings", settings_save: "Save changes", settings_saved: "Saved",
+    settings_current_folder: "Current Drive folder", settings_change_folder: "Change Drive folder",
+    settings_sign_out: "Sign out of Google", settings_reset: "Reset everything on this device",
+    recurring_title: "Recurring transactions", recurring_pause: "Pause", recurring_resume: "Resume", recurring_delete: "Delete series",
+    bulk_title: "Import receipts from Drive", bulk_pick_file: "Pick a file", bulk_pick_folder: "Pick a folder",
+    field_apartment: "Apartment", field_receipt: "Receipt or invoice, optional (image or PDF)",
+    field_category: "Category", field_date: "Date", field_amount: "Amount, EUR", field_description: "Description, optional",
+    income: "Income", cost: "Cost",
+    modal_add_transaction: "Add transaction", modal_edit_transaction: "Edit transaction",
+  },
+  fi: {
+    nav_overview: "Yhteenveto", nav_transactions: "Tapahtumat", nav_apartments: "Asunnot", nav_tax: "Veroraportti",
+    btn_settings: "Asetukset", btn_reconnect: "Yhdista Google uudelleen",
+    btn_add: "Lisaa", btn_edit: "Muokkaa", btn_delete: "Poista", btn_save: "Tallenna", btn_save_changes: "Tallenna muutokset",
+    btn_cancel: "Peruuta",
+    overview_recorded: "Kirjattu tahan mennessa", overview_projected: "Ennuste koko vuodelle",
+    overview_projected_note: "Kirjatut tapahtumat plus aktiiviset toistuvat sarjat vietyna joulukuulle asti, olettaen etta ne jatkuvat kuten asetettu. Tama on ennuste, ei kirjanpito, veroraportti kayttaa aina vain todella kirjattuja tapahtumia.",
+    overview_total_income: "Tulot yhteensa", overview_total_costs: "Kulut yhteensa", overview_net_result: "Nettotulos",
+    overview_projected_income: "Ennustetut tulot", overview_projected_costs: "Ennustetut kulut", overview_projected_net: "Ennustettu netto",
+    overview_by_apartment: "Asunnoittain", overview_projected_full_year_net: "Ennustettu koko vuoden netto",
+    overview_no_apartments_title: "Ei asuntoja vielä", overview_no_apartments_body: "Lisaa ensimmainen asunto aloittaaksesi vuokran ja kulujen seurannan.",
+    overview_add_apartment: "Lisaa asunto", overview_share: "oma osuutesi",
+    tx_title: "Tapahtumat", tx_all_apartments: "Kaikki asunnot", tx_recurring: "Toistuvat",
+    tx_import_drive: "Tuo Drivesta",
+    tx_empty_no_apartments_title: "Lisaa asunto ensin", tx_empty_no_apartments_body: "Tapahtumat kuuluvat aina jollekin asunnolle.",
+    tx_empty_nothing_title: "Ei vielä tapahtumia", tx_empty_nothing_body: "Ei tapahtumia vuodelle {year} talla suodattimella.",
+    tx_recurring_tag: "toistuva", tx_receipt: "Kuitti",
+    apt_title: "Asunnot", apt_add: "Lisaa asunto", apt_edit: "Muokkaa asuntoa",
+    apt_empty_title: "Ei asuntoja vielä", apt_empty_body: "Lisaa yksi aloittaaksesi.",
+    apt_housing_company: "Taloyhtio", apt_your_share: "Oma osuutesi",
+    apt_field_name: "Nimi", apt_field_address: "Osoite", apt_field_company: "Taloyhtio",
+    apt_field_share: "Omistusosuutesi, prosenttia", apt_field_notes: "Muistiinpanot, valinnainen",
+    tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
+    tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
+    tax_get_blank_form: "Hae tyhja 7H-lomake", tax_open_sheet: "Avaa Sheet",
+    tax_income_header: "Tulot", tax_deductible_header: "Vahennyskelpoiset kulut",
+    tax_total_income: "Vuokratulot yhteensa", tax_total_deductible: "Vahennyskelpoiset kulut yhteensa",
+    tax_net_result: "Vuokratulon netto, 100%", tax_your_taxable_share: "Verotettava osuutesi",
+    tax_not_deductible: "Ei vahennyskelpoinen, lisatty hankintamenoon", tax_total_added: "Hankintamenoon lisatty yhteensa",
+    tax_interest_header: "Lainan korot, ilmoitetaan erikseen", tax_total_interest: "Lainan korot yhteensa",
+    tax_interest_share: "Korkojen verotettava osuutesi",
+    tax_projected_header: "Ennuste koko vuodelle, sisaltaa suunnitellut toistuvat, ei ilmoitukseen",
+    tax_projected_income: "Ennustetut vuokratulot yhteensa", tax_projected_deductible: "Ennustetut vahennyskelpoiset kulut yhteensa",
+    tax_projected_net: "Ennustettu netto, 100%", tax_projected_share: "Ennustettu verotettava osuus",
+    settings_title: "Asetukset", settings_save: "Tallenna muutokset", settings_saved: "Tallennettu",
+    settings_current_folder: "Nykyinen Drive-kansio", settings_change_folder: "Vaihda Drive-kansiota",
+    settings_sign_out: "Kirjaudu ulos Googlesta", settings_reset: "Nollaa kaikki talla laitteella",
+    recurring_title: "Toistuvat tapahtumat", recurring_pause: "Keskeyta", recurring_resume: "Jatka", recurring_delete: "Poista sarja",
+    bulk_title: "Tuo kuitteja Drivesta", bulk_pick_file: "Valitse tiedosto", bulk_pick_folder: "Valitse kansio",
+    field_apartment: "Asunto", field_receipt: "Kuitti tai lasku, valinnainen (kuva tai PDF)",
+    field_category: "Kategoria", field_date: "Paivamaara", field_amount: "Maara, EUR", field_description: "Kuvaus, valinnainen",
+    income: "Tulo", cost: "Kulu",
+    modal_add_transaction: "Lisaa tapahtuma", modal_edit_transaction: "Muokkaa tapahtumaa",
+  },
+};
+function makeT(lang) {
+  return function (key, vars) {
+    let s = (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || TRANSLATIONS.en[key] || key;
+    if (vars) Object.keys(vars).forEach((k) => { s = s.replace("{" + k + "}", vars[k]); });
+    return s;
+  };
+}
+
 /* ---------- Google auth + Drive + Sheets ---------- */
 const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
 const DRIVE = "https://www.googleapis.com/drive/v3";
@@ -790,7 +889,7 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
 }
 
 /* ---------- Settings, non-destructive credential and folder updates ---------- */
-function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolderLink, onSignOut, onResetEverything }) {
+function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolderLink, onSignOut, onResetEverything, t }) {
   const [clientId, setClientId] = useState(config.clientId || "");
   const [apiKey, setApiKey] = useState(config.apiKey || "");
   const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey || "");
@@ -825,7 +924,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
   }
 
   return (
-    <Modal onClose={onClose} title="Settings">
+    <Modal onClose={onClose} title={t("settings_title")}>
       <Field label="Google OAuth Client ID">
         <input className={inputCls} style={inputStyle} value={clientId} onChange={(e) => setClientId(e.target.value)} />
       </Field>
@@ -842,16 +941,16 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
         <input className={inputCls} style={inputStyle} value={filerName} onChange={(e) => setFilerName(e.target.value)} />
       </Field>
       <button onClick={save} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
-        {saved ? "Saved" : "Save changes"}
+        {saved ? t("settings_saved") : t("settings_save")}
       </button>
       <div className="text-xs mt-1" style={{ color: MUTE }}>
         If you changed the Client ID or Google API key, click Reconnect Google in the header afterward.
       </div>
 
       <div className="mt-4 pt-4 border-t" style={{ borderColor: LINE }}>
-        <div className="text-xs mb-2" style={{ color: MUTE }}>Current Drive folder: {folder?.name || "none"}</div>
+        <div className="text-xs mb-2" style={{ color: MUTE }}>{t("settings_current_folder")}: {folder?.name || "none"}</div>
         <button onClick={onPickFolder} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
-          Change Drive folder
+          {t("settings_change_folder")}
         </button>
         <div className="text-xs text-center mb-2" style={{ color: MUTE }}>or, if the picker does not work here</div>
         <Field label="Paste a Google Drive folder link">
@@ -865,11 +964,11 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
           {folderLinkBusy ? "Checking..." : "Use this folder"}
         </button>
         <button onClick={onSignOut} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
-          Sign out of Google
+          {t("settings_sign_out")}
         </button>
         <button onClick={() => { if (confirm("This clears all saved credentials and the folder link on this device. Your data in Drive is not deleted. Continue?")) onResetEverything(); }}
           className="w-full py-2 rounded text-sm" style={{ color: RUST }}>
-          Reset everything on this device
+          {t("settings_reset")}
         </button>
       </div>
     </Modal>
@@ -877,7 +976,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
 }
 
 /* ---------- Apartment form ---------- */
-function ApartmentFormModal({ initial, onClose, onSave }) {
+function ApartmentFormModal({ initial, onClose, onSave, t }) {
   const [form, setForm] = useState(
     initial || {
       name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
@@ -888,16 +987,16 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
   const evConfig = CONFIGURABLE_SECTION.erityisvastike;
   return (
-    <Modal onClose={onClose} title={initial ? "Edit apartment" : "Add apartment"}>
-      <Field label="Name">
+    <Modal onClose={onClose} title={initial ? t("apt_edit") : t("apt_add")}>
+      <Field label={t("apt_field_name")}>
         <input className={inputCls} style={inputStyle} value={form.name} placeholder="e.g. Mannynkerkko 2h"
           onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </Field>
-      <Field label="Address">
+      <Field label={t("apt_field_address")}>
         <input className={inputCls} style={inputStyle} value={form.address} placeholder="Street, Oulu"
           onChange={(e) => setForm({ ...form, address: e.target.value })} />
       </Field>
-      <Field label="Housing company">
+      <Field label={t("apt_field_company")}>
         <input className={inputCls} style={inputStyle} value={form.housingCompany} placeholder="e.g. As Oy Mannynkerkko"
           onChange={(e) => setForm({ ...form, housingCompany: e.target.value })} />
       </Field>
@@ -911,7 +1010,7 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
             onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} />
         </Field>
       </div>
-      <Field label="Your ownership share, percent">
+      <Field label={t("apt_field_share")}>
         <input type="number" min="0" max="100" className={inputCls} style={inputStyle} value={form.sharePercent}
           onChange={(e) => setForm({ ...form, sharePercent: e.target.value })} />
       </Field>
@@ -938,21 +1037,21 @@ function ApartmentFormModal({ initial, onClose, onSave }) {
           </select>
         </Field>
       )}
-      <Field label="Notes, optional">
+      <Field label={t("apt_field_notes")}>
         <textarea className={inputCls} style={{ ...inputStyle, minHeight: 60 }} value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })} />
       </Field>
       <button onClick={() => form.name.trim() && onSave({ ...form, sharePercent: Number(form.sharePercent) || 0 })}
         disabled={!form.name.trim()} className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40"
         style={{ background: TEAL, color: "#fff" }}>
-        Save
+        {t("btn_save")}
       </button>
     </Modal>
   );
 }
 
 /* ---------- Transaction form ---------- */
-function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, initial, onClose, onSave }) {
+function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, initial, onClose, onSave, t }) {
   const [form, setForm] = useState(
     initial
       ? {
@@ -1030,8 +1129,8 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
   }
 
   return (
-    <Modal onClose={onClose} title={initial ? "Edit transaction" : "Add transaction"}>
-      <Field label="Apartment">
+    <Modal onClose={onClose} title={initial ? t("modal_edit_transaction") : t("modal_add_transaction")}>
+      <Field label={t("field_apartment")}>
         <select className={inputCls} style={inputStyle} value={form.apartmentId}
           onChange={(e) => setForm({ ...form, apartmentId: e.target.value })}>
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -1045,7 +1144,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
           ) : initial.attachmentName}. Choosing a new file below replaces it.
         </div>
       )}
-      <Field label={initial ? "Replace receipt or invoice, optional (image or PDF)" : "Receipt or invoice, optional (image or PDF)"}>
+      <Field label={initial ? "Replace receipt or invoice, optional (image or PDF)" : t("field_receipt")}>
         <input type="file" accept="image/*,application/pdf" className={inputCls} style={inputStyle}
           onChange={(e) => { setReceiptFile(e.target.files[0] || null); setScanError(""); }} />
       </Field>
@@ -1078,14 +1177,14 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
       <div className="flex gap-2 mb-3">
         <button onClick={() => setType("income")} className="flex-1 py-2 rounded text-sm font-medium border"
           style={{ background: form.type === "income" ? GREEN : "transparent", color: form.type === "income" ? "#fff" : INK, borderColor: form.type === "income" ? GREEN : LINE }}>
-          Income
+          {t("income")}
         </button>
         <button onClick={() => setType("expense")} className="flex-1 py-2 rounded text-sm font-medium border"
           style={{ background: form.type === "expense" ? RUST : "transparent", color: form.type === "expense" ? "#fff" : INK, borderColor: form.type === "expense" ? RUST : LINE }}>
-          Cost
+          {t("cost")}
         </button>
       </div>
-      <Field label="Category">
+      <Field label={t("field_category")}>
         <select className={inputCls} style={inputStyle} value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}>
           {categories.map((c) => (
@@ -1095,16 +1194,16 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         {activeCat?.note && <div className="text-xs mt-1" style={{ color: MUTE }}>{activeCat.note}</div>}
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Date">
+        <Field label={t("field_date")}>
           <input type="date" className={inputCls} style={inputStyle} value={form.date}
             onChange={(e) => setForm({ ...form, date: e.target.value })} />
         </Field>
-        <Field label="Amount, EUR">
+        <Field label={t("field_amount")}>
           <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.amount}
             placeholder="0.00" onChange={(e) => setForm({ ...form, amount: e.target.value })} />
         </Field>
       </div>
-      <Field label="Description, optional">
+      <Field label={t("field_description")}>
         <input className={inputCls} style={inputStyle} value={form.description}
           placeholder="e.g. June rent, tenant Matti" onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </Field>
@@ -1132,39 +1231,39 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
 
       <button onClick={handleSave} disabled={!form.apartmentId || !(Number(form.amount) > 0) || saving}
         className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
-        {saving ? "Saving..." : initial ? "Save changes" : "Save transaction"}
+        {saving ? "Saving..." : initial ? t("btn_save_changes") : t("modal_add_transaction")}
       </button>
     </Modal>
   );
 }
 
 /* ---------- Recurring templates management ---------- */
-function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete }) {
+function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t }) {
   return (
-    <Modal onClose={onClose} title="Recurring transactions">
+    <Modal onClose={onClose} title={t("recurring_title")}>
       {templates.length === 0 ? (
         <div className="text-sm" style={{ color: MUTE }}>
           No recurring series yet. Tick "Repeat monthly" when adding a transaction to start one.
         </div>
       ) : (
         <div className="space-y-2">
-          {templates.map((t) => {
-            const a = apartments.find((x) => x.id === t.apartmentId);
+          {templates.map((tpl) => {
+            const a = apartments.find((x) => x.id === tpl.apartmentId);
             return (
-              <div key={t.id} className="rounded border px-3 py-2" style={{ borderColor: LINE }}>
+              <div key={tpl.id} className="rounded border px-3 py-2" style={{ borderColor: LINE }}>
                 <div className="text-sm font-medium" style={{ color: INK }}>
-                  {catLabel(t.category)} - {eur(t.amount)}
+                  {catLabel(tpl.category)} - {eur(tpl.amount)}
                 </div>
                 <div className="text-xs" style={{ color: MUTE }}>
-                  {a ? a.name : "Unknown apartment"} - day {t.dayOfMonth} of month, from {t.startMonth}
-                  {t.endMonth ? ` to ${t.endMonth}` : ", no end date"}
+                  {a ? a.name : "Unknown apartment"} - day {tpl.dayOfMonth} of month, from {tpl.startMonth}
+                  {tpl.endMonth ? ` to ${tpl.endMonth}` : ", no end date"}
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => onUpdate(t.id, { active: !t.active })} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: INK }}>
-                    {t.active ? "Pause" : "Resume"}
+                  <button onClick={() => onUpdate(tpl.id, { active: !tpl.active })} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: INK }}>
+                    {tpl.active ? t("recurring_pause") : t("recurring_resume")}
                   </button>
-                  <button onClick={() => { if (confirm("Stop this recurring series? Past entries stay.")) onDelete(t.id); }} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: RUST }}>
-                    Delete series
+                  <button onClick={() => { if (confirm("Stop this recurring series? Past entries stay.")) onDelete(tpl.id); }} className="text-xs px-2 py-1 rounded border" style={{ borderColor: LINE, color: RUST }}>
+                    {t("recurring_delete")}
                   </button>
                 </div>
               </div>
@@ -1177,7 +1276,7 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete }) 
 }
 
 /* ---------- Bulk import from Drive ---------- */
-function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport }) {
+function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, t }) {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -1277,7 +1376,7 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport }
   const readyCount = items.filter((it) => it.include && it.status === "done" && it.form.apartmentId && Number(it.form.amount) > 0).length;
 
   return (
-    <Modal onClose={onClose} title="Import receipts from Drive">
+    <Modal onClose={onClose} title={t("bulk_title")}>
       {!geminiApiKey && (
         <div className="text-xs mb-3 px-3 py-2 rounded" style={{ background: "#FBEAE5", color: RUST }}>
           Add your Gemini API key in Settings first, this needs it to read the receipts.
@@ -1286,11 +1385,11 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport }
       <div className="flex gap-2 mb-3">
         <button onClick={pickSingleFile} disabled={!geminiApiKey || busy} type="button"
           className="flex-1 py-2 rounded text-sm font-medium border disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
-          Pick a file
+          {t("bulk_pick_file")}
         </button>
         <button onClick={pickFolderToScan} disabled={!geminiApiKey || busy} type="button"
           className="flex-1 py-2 rounded text-sm font-medium border disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
-          Pick a folder
+          {t("bulk_pick_folder")}
         </button>
       </div>
       {progress && <div className="text-xs mb-3" style={{ color: MUTE }}>{progress}</div>}
@@ -1353,59 +1452,58 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport }
     </Modal>
   );
 }
-function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProjected, onAddApartment }) {
+function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProjected, onAddApartment, t }) {
   if (apartments.length === 0) {
-    return <EmptyState title="No apartments yet" body="Add the first apartment to start recording its rent and costs." actionLabel="Add apartment" onAction={onAddApartment} />;
+    return <EmptyState title={t("overview_no_apartments_title")} body={t("overview_no_apartments_body")} actionLabel={t("overview_add_apartment")} onAction={onAddApartment} />;
   }
   const totals = apartments.reduce((acc, a) => {
-    const t = apartmentTotals(a.id, year);
-    acc.income += t.income; acc.expense += t.expense; return acc;
+    const tot = apartmentTotals(a.id, year);
+    acc.income += tot.income; acc.expense += tot.expense; return acc;
   }, { income: 0, expense: 0 });
   const projected = apartments.reduce((acc, a) => {
-    const t = apartmentTotalsProjected(a.id, year);
-    acc.income += t.income; acc.expense += t.expense; return acc;
+    const tot = apartmentTotalsProjected(a.id, year);
+    acc.income += tot.income; acc.expense += tot.expense; return acc;
   }, { income: 0, expense: 0 });
   return (
     <>
-      <Section eyebrow={String(year)} title="Recorded so far">
+      <Section eyebrow={String(year)} title={t("overview_recorded")}>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Total income" value={totals.income} tone="up" />
-          <StatCard label="Total costs" value={totals.expense} tone="down" />
-          <StatCard label="Net result" value={totals.income - totals.expense} />
+          <StatCard label={t("overview_total_income")} value={totals.income} tone="up" />
+          <StatCard label={t("overview_total_costs")} value={totals.expense} tone="down" />
+          <StatCard label={t("overview_net_result")} value={totals.income - totals.expense} />
         </div>
       </Section>
-      <Section eyebrow={String(year)} title="Projected full year">
+      <Section eyebrow={String(year)} title={t("overview_projected")}>
         <div className="text-xs mb-3" style={{ color: MUTE }}>
-          Recorded transactions plus your active recurring series carried through December, assuming they continue
-          exactly as set up. This is a budget, not a record, the Tax report only ever uses what is actually recorded.
+          {t("overview_projected_note")}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Projected income" value={projected.income} tone="up" />
-          <StatCard label="Projected costs" value={projected.expense} tone="down" />
-          <StatCard label="Projected net" value={projected.income - projected.expense} />
+          <StatCard label={t("overview_projected_income")} value={projected.income} tone="up" />
+          <StatCard label={t("overview_projected_costs")} value={projected.expense} tone="down" />
+          <StatCard label={t("overview_projected_net")} value={projected.income - projected.expense} />
         </div>
       </Section>
-      <Section title="By apartment">
+      <Section title={t("overview_by_apartment")}>
         <div className="space-y-2">
           {apartments.map((a) => {
-            const t = apartmentTotals(a.id, year);
+            const tot = apartmentTotals(a.id, year);
             const p = apartmentTotalsProjected(a.id, year);
             return (
               <div key={a.id} className="px-4 py-3 rounded border" style={{ borderColor: LINE, background: CARD }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
-                    <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany || "No housing company set"} - your share {a.sharePercent ?? 100}%</div>
+                    <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany || "No housing company set"} - {t("overview_share")} {a.sharePercent ?? 100}%</div>
                   </div>
                   <div className="flex items-center gap-5 font-mono text-sm">
-                    <div style={{ color: GREEN }}>{eur(t.income)}</div>
-                    <div style={{ color: RUST }}>{eur(t.expense)}</div>
-                    <div className="font-semibold" style={{ color: INK }}>{eur(t.net)}</div>
+                    <div style={{ color: GREEN }}>{eur(tot.income)}</div>
+                    <div style={{ color: RUST }}>{eur(tot.expense)}</div>
+                    <div className="font-semibold" style={{ color: INK }}>{eur(tot.net)}</div>
                   </div>
                 </div>
-                {(p.income !== t.income || p.expense !== t.expense) && (
+                {(p.income !== tot.income || p.expense !== tot.expense) && (
                   <div className="text-xs mt-1 text-right font-mono" style={{ color: TEAL }}>
-                    Projected full year net: {eur(p.net)}
+                    {t("overview_projected_full_year_net")}: {eur(p.net)}
                   </div>
                 )}
               </div>
@@ -1417,54 +1515,54 @@ function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProject
   );
 }
 
-function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onEdit, onDelete, onManageRecurring, recurringCount, onBulkImport }) {
+function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onEdit, onDelete, onManageRecurring, recurringCount, onBulkImport, t }) {
   const nameFor = (id) => apartments.find((a) => a.id === id)?.name || "Unknown";
   const rows = transactions
-    .filter((t) => new Date(t.date).getFullYear() === year)
-    .filter((t) => filterApartmentId === "all" || t.apartmentId === filterApartmentId)
+    .filter((tx) => new Date(tx.date).getFullYear() === year)
+    .filter((tx) => filterApartmentId === "all" || tx.apartmentId === filterApartmentId)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
   return (
-    <Section eyebrow={String(year)} title="Transactions" right={
+    <Section eyebrow={String(year)} title={t("tx_title")} right={
       <div className="flex items-center gap-2 flex-wrap">
         <select value={filterApartmentId} onChange={(e) => setFilterApartmentId(e.target.value)} className="px-3 py-2 rounded border text-sm" style={{ borderColor: LINE, color: INK }}>
-          <option value="all">All apartments</option>
+          <option value="all">{t("tx_all_apartments")}</option>
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
         <button onClick={onManageRecurring} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>
-          Recurring{recurringCount ? ` (${recurringCount})` : ""}
+          {t("tx_recurring")}{recurringCount ? ` (${recurringCount})` : ""}
         </button>
         <button onClick={onBulkImport} disabled={apartments.length === 0} className="px-3 py-2 rounded text-sm font-medium border disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
-          Import from Drive
+          {t("tx_import_drive")}
         </button>
-        <button onClick={onAdd} disabled={apartments.length === 0} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>Add</button>
+        <button onClick={onAdd} disabled={apartments.length === 0} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>{t("btn_add")}</button>
       </div>
     }>
       {apartments.length === 0 ? (
-        <EmptyState title="Add an apartment first" body="Transactions belong to an apartment." />
+        <EmptyState title={t("tx_empty_no_apartments_title")} body={t("tx_empty_no_apartments_body")} />
       ) : rows.length === 0 ? (
-        <EmptyState title="Nothing recorded yet" body={`No transactions for ${year} with this filter.`} />
+        <EmptyState title={t("tx_empty_nothing_title")} body={t("tx_empty_nothing_body", { year })} />
       ) : (
         <div className="rounded border overflow-hidden" style={{ borderColor: LINE, background: CARD }}>
-          {rows.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: LINE }}>
-              <div className="w-1 self-stretch rounded" style={{ background: t.type === "income" ? GREEN : RUST }} />
-              <div className="text-xs font-mono w-24 shrink-0" style={{ color: MUTE }}>{dateFmt(t.date)}</div>
+          {rows.map((tx) => (
+            <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: LINE }}>
+              <div className="w-1 self-stretch rounded" style={{ background: tx.type === "income" ? GREEN : RUST }} />
+              <div className="text-xs font-mono w-24 shrink-0" style={{ color: MUTE }}>{dateFmt(tx.date)}</div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm" style={{ color: INK }}>
-                  {catLabel(t.category)}
-                  {apartments.length > 1 && <span style={{ color: MUTE }}> - {nameFor(t.apartmentId)}</span>}
-                  {t.recurringId && <span className="text-xs" style={{ color: TEAL }}> - recurring</span>}
+                  {catLabel(tx.category)}
+                  {apartments.length > 1 && <span style={{ color: MUTE }}> - {nameFor(tx.apartmentId)}</span>}
+                  {tx.recurringId && <span className="text-xs" style={{ color: TEAL }}> - {t("tx_recurring_tag")}</span>}
                 </div>
-                {t.description && <div className="text-xs truncate" style={{ color: MUTE }}>{t.description}</div>}
-                {t.attachmentUrl && (
-                  <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-xs underline" style={{ color: TEAL }}>Receipt</a>
+                {tx.description && <div className="text-xs truncate" style={{ color: MUTE }}>{tx.description}</div>}
+                {tx.attachmentUrl && (
+                  <a href={tx.attachmentUrl} target="_blank" rel="noreferrer" className="text-xs underline" style={{ color: TEAL }}>{t("tx_receipt")}</a>
                 )}
               </div>
-              <div className="font-mono text-sm w-28 text-right shrink-0" style={{ color: t.type === "income" ? GREEN : RUST }}>
-                {t.type === "income" ? "+" : "\u2212"}{eur(t.amount)}
+              <div className="font-mono text-sm w-28 text-right shrink-0" style={{ color: tx.type === "income" ? GREEN : RUST }}>
+                {tx.type === "income" ? "+" : "\u2212"}{eur(tx.amount)}
               </div>
-              <button onClick={() => onEdit(t)} className="p-1 shrink-0 text-xs" style={{ color: TEAL }}>Edit</button>
-              <button onClick={() => onDelete(t.id)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>Delete</button>
+              <button onClick={() => onEdit(tx)} className="p-1 shrink-0 text-xs" style={{ color: TEAL }}>{t("btn_edit")}</button>
+              <button onClick={() => onDelete(tx.id)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>{t("btn_delete")}</button>
             </div>
           ))}
         </div>
@@ -1473,17 +1571,17 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
   );
 }
 
-function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete }) {
+function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, t }) {
   return (
-    <Section title="Apartments" right={
-      <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>Add apartment</button>
+    <Section title={t("apt_title")} right={
+      <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>{t("apt_add")}</button>
     }>
       {apartments.length === 0 ? (
-        <EmptyState title="No apartments yet" body="Add one to begin." actionLabel="Add apartment" onAction={onAdd} />
+        <EmptyState title={t("apt_empty_title")} body={t("apt_empty_body")} actionLabel={t("apt_add")} onAction={onAdd} />
       ) : (
         <div className="space-y-2">
           {apartments.map((a) => {
-            const t = apartmentTotals(a.id, year);
+            const tot = apartmentTotals(a.id, year);
             return (
               <div key={a.id} className="rounded border px-4 py-3" style={{ borderColor: LINE, background: CARD }}>
                 <div className="flex items-start justify-between">
@@ -1491,7 +1589,7 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                     <div className="text-sm font-medium" style={{ color: INK }}>{a.name}</div>
                     <div className="text-xs mt-0.5" style={{ color: MUTE }}>{a.address}</div>
                     <div className="text-xs mt-0.5" style={{ color: MUTE }}>
-                      Housing company: {a.housingCompany || "not set"} - Your share: {a.sharePercent ?? 100}%
+                      {t("apt_housing_company")}: {a.housingCompany || "not set"} - {t("apt_your_share")}: {a.sharePercent ?? 100}%
                     </div>
                     <div className="text-xs mt-0.5" style={{ color: MUTE }}>Rahoitusvastike: {rvLabelFor(a)}</div>
                     {a.erityisvastikeDescription && (
@@ -1502,13 +1600,13 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                     {a.notes && <div className="text-xs mt-1" style={{ color: MUTE }}>{a.notes}</div>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => onEdit(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: LINE, color: INK }}>Edit</button>
-                    <button onClick={() => { if (confirm(`Remove ${a.name} and all its transactions?`)) onDelete(a.id); }} className="text-xs p-1.5" style={{ color: RUST }}>Delete</button>
+                    <button onClick={() => onEdit(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: LINE, color: INK }}>{t("btn_edit")}</button>
+                    <button onClick={() => { if (confirm(`Remove ${a.name} and all its transactions?`)) onDelete(a.id); }} className="text-xs p-1.5" style={{ color: RUST }}>{t("btn_delete")}</button>
                   </div>
                 </div>
                 <div className="flex gap-5 mt-3 font-mono text-xs">
-                  <span style={{ color: MUTE }}>{year} income <b style={{ color: GREEN }}>{eur(t.income)}</b></span>
-                  <span style={{ color: MUTE }}>{year} costs <b style={{ color: RUST }}>{eur(t.expense)}</b></span>
+                  <span style={{ color: MUTE }}>{year} income <b style={{ color: GREEN }}>{eur(tot.income)}</b></span>
+                  <span style={{ color: MUTE }}>{year} costs <b style={{ color: RUST }}>{eur(tot.expense)}</b></span>
                 </div>
               </div>
             );
@@ -1519,7 +1617,7 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
   );
 }
 
-function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxApartmentId, setTaxApartmentId, sheetUrl, filerName }) {
+function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxApartmentId, setTaxApartmentId, sheetUrl, filerName, t }) {
   const relevantApartments = taxApartmentId === "all" ? apartments : apartments.filter((a) => a.id === taxApartmentId);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState("");
@@ -1550,11 +1648,11 @@ function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxA
   function downloadCsv() {
     const lines = [["Apartment", "Date", "Type", "Category", "Category (EN)", "Amount EUR", "Description"]];
     transactions
-      .filter((t) => new Date(t.date).getFullYear() === year)
-      .filter((t) => taxApartmentId === "all" || t.apartmentId === taxApartmentId)
-      .forEach((t) => {
-        const a = apartments.find((a) => a.id === t.apartmentId);
-        lines.push([a?.name || "", t.date, t.type, catLabel(t.category), catEn(t.category), String(t.amount).replace(".", ","), t.description || ""]);
+      .filter((tx) => new Date(tx.date).getFullYear() === year)
+      .filter((tx) => taxApartmentId === "all" || tx.apartmentId === taxApartmentId)
+      .forEach((tx) => {
+        const a = apartments.find((a) => a.id === tx.apartmentId);
+        lines.push([a?.name || "", tx.date, tx.type, catLabel(tx.category), catEn(tx.category), String(tx.amount).replace(".", ","), tx.description || ""]);
       });
     const csv = lines.map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -1564,23 +1662,23 @@ function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxA
     URL.revokeObjectURL(url);
   }
 
-  if (apartments.length === 0) return <EmptyState title="No apartments yet" body="Add an apartment and record transactions first." />;
+  if (apartments.length === 0) return <EmptyState title={t("overview_no_apartments_title")} body="Add an apartment and record transactions first." />;
 
   return (
-    <Section eyebrow={String(year)} title="Tax report" right={
+    <Section eyebrow={String(year)} title={t("tax_title")} right={
       <div className="flex items-center gap-2 flex-wrap">
         <select value={taxApartmentId} onChange={(e) => setTaxApartmentId(e.target.value)} className="px-3 py-2 rounded border text-sm" style={{ borderColor: LINE, color: INK }}>
-          <option value="all">All apartments, separate</option>
+          <option value="all">{t("tax_all_separate")}</option>
           {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <button onClick={downloadCsv} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Export CSV</button>
+        <button onClick={downloadCsv} className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>{t("tax_export_csv")}</button>
         <button onClick={downloadPdf} disabled={pdfBusy} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-50" style={{ background: TEAL, color: "#fff" }}>
-          {pdfBusy ? "Building PDF..." : "Download 7H summary PDF"}
+          {pdfBusy ? t("tax_building_pdf") : t("tax_download_pdf")}
         </button>
         <a href={VERO_7H_BLANK_URL} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>
-          Get blank 7H form
+          {t("tax_get_blank_form")}
         </a>
-        {sheetUrl && <a href={sheetUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>Open Sheet</a>}
+        {sheetUrl && <a href={sheetUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded text-sm font-medium border" style={{ borderColor: LINE, color: INK }}>{t("tax_open_sheet")}</a>}
       </div>
     }>
       {pdfError && <div className="mb-3 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>{pdfError}</div>}
@@ -1606,33 +1704,33 @@ function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxA
                 <div className="text-xs" style={{ color: MUTE }}>{a.housingCompany}</div>
               </div>
               <div className="px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Income</div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("tax_income_header")}</div>
                 {INCOME_CATEGORIES.map((c) => <RowLine key={c.id} label={`${c.fi} (${c.en})`} value={r.byCategory[c.id]} />)}
-                <RowLine label="Total rental income" value={r.incomeTotal} bold />
+                <RowLine label={t("tax_total_income")} value={r.incomeTotal} bold />
 
-                <div className="text-xs font-semibold uppercase tracking-wide mt-4 mb-2" style={{ color: MUTE }}>Deductible costs</div>
+                <div className="text-xs font-semibold uppercase tracking-wide mt-4 mb-2" style={{ color: MUTE }}>{t("tax_deductible_header")}</div>
                 {r.deductibleCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
-                <RowLine label="Total deductible costs" value={r.expenseTotal} negative bold />
+                <RowLine label={t("tax_total_deductible")} value={r.expenseTotal} negative bold />
 
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: LINE }}>
-                  <RowLine label="Net rental result, 100%" value={r.net} bold />
-                  <RowLine label={`Your taxable share, ${a.sharePercent ?? 100}%`} value={r.net * share} bold accent />
+                  <RowLine label={t("tax_net_result")} value={r.net} bold />
+                  <RowLine label={`${t("tax_your_taxable_share")}, ${a.sharePercent ?? 100}%`} value={r.net * share} bold accent />
                 </div>
 
                 {r.capitalizedTotal !== 0 && (
                   <div className="mt-4 pt-3 border-t" style={{ borderColor: LINE }}>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Not deductible, added to acquisition cost</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("tax_not_deductible")}</div>
                     {r.capitalizedCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
-                    <RowLine label="Total added to acquisition cost" value={r.capitalizedTotal} negative bold />
+                    <RowLine label={t("tax_total_added")} value={r.capitalizedTotal} negative bold />
                   </div>
                 )}
 
                 {r.interestTotal !== 0 && (
                   <div className="mt-4 pt-3 border-t" style={{ borderColor: LINE }}>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>Loan interest, reported separately</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("tax_interest_header")}</div>
                     {r.interestCategories.map((c) => <RowLine key={c.id} label={categoryLabelFor(c, a)} value={r.byCategory[c.id]} negative />)}
-                    <RowLine label="Total loan interest" value={r.interestTotal} negative bold />
-                    <RowLine label={`Your taxable share of the interest, ${a.sharePercent ?? 100}%`} value={r.interestTotal * share} negative />
+                    <RowLine label={t("tax_total_interest")} value={r.interestTotal} negative bold />
+                    <RowLine label={`${t("tax_interest_share")}, ${a.sharePercent ?? 100}%`} value={r.interestTotal * share} negative />
                   </div>
                 )}
 
@@ -1640,12 +1738,12 @@ function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxA
                   <div className="mt-4 pt-3 border-t-2" style={{ borderColor: TEAL, background: "#EFF5F7" }}>
                     <div className="px-3 py-2">
                       <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: TEAL }}>
-                        Projected full year, includes planned recurring, not for filing
+                        {t("tax_projected_header")}
                       </div>
-                      <RowLine label="Projected total rental income" value={pr.incomeTotal} />
-                      <RowLine label="Projected total deductible costs" value={pr.expenseTotal} negative />
-                      <RowLine label="Projected net rental result, 100%" value={pr.net} bold />
-                      <RowLine label={`Projected taxable share, ${a.sharePercent ?? 100}%`} value={pr.net * share} bold accent />
+                      <RowLine label={t("tax_projected_income")} value={pr.incomeTotal} />
+                      <RowLine label={t("tax_projected_deductible")} value={pr.expenseTotal} negative />
+                      <RowLine label={t("tax_projected_net")} value={pr.net} bold />
+                      <RowLine label={`${t("tax_projected_share")}, ${a.sharePercent ?? 100}%`} value={pr.net * share} bold accent />
                     </div>
                   </div>
                 )}
@@ -1664,6 +1762,12 @@ function App() {
   function saveGeminiKey(key) {
     setConfig(saveConfig({ geminiApiKey: key }));
   }
+  const [language, setLanguage] = useState(loadConfig().language || "en");
+  function setLang(lang) {
+    setLanguage(lang);
+    saveConfig({ language: lang });
+  }
+  const t = makeT(language);
   const [ready, setReady] = useState(false); // signed in + folder chosen + data loaded
   const [apartments, setApartments] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -1977,11 +2081,15 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex rounded border overflow-hidden text-xs" style={{ borderColor: LINE }}>
+              <button onClick={() => setLang("en")} className="px-2 py-1" style={{ background: language === "en" ? TEAL : "transparent", color: language === "en" ? "#fff" : MUTE }}>EN</button>
+              <button onClick={() => setLang("fi")} className="px-2 py-1" style={{ background: language === "fi" ? TEAL : "transparent", color: language === "fi" ? "#fff" : MUTE }}>FI</button>
+            </div>
             <button onClick={() => setShowSettingsModal(true)} className="px-2 py-1 rounded text-xs border" style={{ borderColor: LINE, color: MUTE }}>
-              Settings
+              {t("btn_settings")}
             </button>
             <button onClick={reconnect} className="px-2 py-1 rounded text-xs border" style={{ borderColor: LINE, color: MUTE }}>
-              Reconnect Google
+              {t("btn_reconnect")}
             </button>
             <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="px-3 py-2 rounded border text-sm font-mono" style={{ borderColor: LINE, color: INK }}>
               {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -1989,7 +2097,7 @@ function App() {
           </div>
         </div>
         <nav className="max-w-5xl mx-auto px-5 flex gap-1 flex-wrap">
-          {[["overview", "Overview"], ["transactions", "Transactions"], ["apartments", "Apartments"], ["tax", "Tax report"]].map(([id, label]) => (
+          {[["overview", t("nav_overview")], ["transactions", t("nav_transactions")], ["apartments", t("nav_apartments")], ["tax", t("nav_tax")]].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} className="px-4 py-2.5 text-sm font-medium border-b-2"
               style={{ borderColor: tab === id ? TEAL : "transparent", color: tab === id ? INK : MUTE }}>
               {label}
@@ -2001,46 +2109,46 @@ function App() {
       <main className="max-w-5xl mx-auto px-5 py-8">
         {error && <div className="mb-4 px-3 py-2 rounded text-sm" style={{ background: "#FBEAE5", color: RUST }}>{error}</div>}
 
-        {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} apartmentTotalsProjected={apartmentTotalsProjected} onAddApartment={() => setShowApartmentForm(true)} />}
+        {tab === "overview" && <OverviewTab apartments={apartments} year={year} apartmentTotals={apartmentTotals} apartmentTotalsProjected={apartmentTotalsProjected} onAddApartment={() => setShowApartmentForm(true)} t={t} />}
         {tab === "transactions" && (
           <TransactionsTab apartments={apartments} transactions={transactions} filterApartmentId={txApartmentFilter}
-            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onEdit={(t) => setEditingTransaction(t)} onDelete={deleteTransaction}
-            onManageRecurring={() => setShowRecurringModal(true)} recurringCount={recurringTemplates.filter((t) => t.active).length}
-            onBulkImport={() => setShowBulkImport(true)} />
+            setFilterApartmentId={setTxApartmentFilter} year={year} onAdd={() => setShowTxForm(true)} onEdit={(tx) => setEditingTransaction(tx)} onDelete={deleteTransaction}
+            onManageRecurring={() => setShowRecurringModal(true)} recurringCount={recurringTemplates.filter((rt) => rt.active).length}
+            onBulkImport={() => setShowBulkImport(true)} t={t} />
         )}
         {tab === "apartments" && (
           <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
-            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} />
+            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} t={t} />
         )}
         {tab === "tax" && (
           <TaxReportTab apartments={apartments} transactions={transactions} recurringTemplates={recurringTemplates} year={year} taxApartmentId={taxApartmentId}
-            setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} filerName={config.filerName} />
+            setTaxApartmentId={setTaxApartmentId} sheetUrl={sheetUrl} filerName={config.filerName} t={t} />
         )}
       </main>
 
-      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} />}
-      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} />}
+      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} />}
+      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} />}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
-          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} />
+          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} t={t} />
       )}
       {editingTransaction && (
         <TransactionFormModal apartments={apartments} initial={editingTransaction}
           geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setEditingTransaction(null)}
-          onSave={(data) => updateTransaction(editingTransaction.id, data)} />
+          onSave={(data) => updateTransaction(editingTransaction.id, data)} t={t} />
       )}
       {showRecurringModal && (
         <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
-          onUpdate={updateRecurringTemplate} onDelete={deleteRecurringTemplate} />
+          onUpdate={updateRecurringTemplate} onDelete={deleteRecurringTemplate} t={t} />
       )}
       {showBulkImport && (
         <BulkImportModal apartments={apartments} geminiApiKey={config.geminiApiKey} apiKey={config.apiKey}
-          onClose={() => setShowBulkImport(false)} onImport={bulkAddTransactions} />
+          onClose={() => setShowBulkImport(false)} onImport={bulkAddTransactions} t={t} />
       )}
       {showSettingsModal && (
         <SettingsModal config={config} folder={folder} onClose={() => setShowSettingsModal(false)}
           onSave={(patch) => setConfig(saveConfig(patch))} onPickFolder={pickFolderFromSettings} onFolderLink={setFolderFromMeta}
-          onSignOut={signOutGoogle} onResetEverything={resetEverything} />
+          onSignOut={signOutGoogle} onResetEverything={resetEverything} t={t} />
       )}
     </div>
   );
