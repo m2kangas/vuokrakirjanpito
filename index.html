@@ -181,7 +181,9 @@ const TRANSLATIONS = {
     nav_overview: "Overview", nav_transactions: "Transactions", nav_apartments: "Apartments", nav_tax: "Tax report",
     btn_settings: "Settings", btn_reconnect: "Reconnect Google",
     btn_add: "Add", btn_edit: "Edit", btn_delete: "Delete", btn_save: "Save", btn_save_changes: "Save changes",
-    btn_cancel: "Cancel",
+    btn_cancel: "Cancel", btn_delete_permanently: "Delete permanently",
+    apt_delete_confirm_title: "Delete this apartment?", apt_delete_confirm_warning: "This cannot be undone. All transactions, loans and receipt links for this apartment will be permanently removed.",
+    tx_delete_confirm_title: "Delete this transaction?", tx_delete_confirm_warning: "This cannot be undone.",
     overview_recorded: "Recorded so far", overview_projected: "Projected full year",
     overview_projected_note: "Recorded transactions plus your active recurring series carried through December, assuming they continue exactly as set up. This is a budget, not a record, the Tax report only ever uses what is actually recorded.",
     overview_total_income: "Total income", overview_total_costs: "Total costs", overview_net_result: "Net result",
@@ -294,7 +296,9 @@ const TRANSLATIONS = {
     nav_overview: "Yhteenveto", nav_transactions: "Tapahtumat", nav_apartments: "Asunnot", nav_tax: "Veroraportti",
     btn_settings: "Asetukset", btn_reconnect: "Yhdistä Google uudelleen",
     btn_add: "Lisää", btn_edit: "Muokkaa", btn_delete: "Poista", btn_save: "Tallenna", btn_save_changes: "Tallenna muutokset",
-    btn_cancel: "Peruuta",
+    btn_cancel: "Peruuta", btn_delete_permanently: "Poista pysyvästi",
+    apt_delete_confirm_title: "Poistetaanko tämä asunto?", apt_delete_confirm_warning: "Tätä ei voi perua. Kaikki tämän asunnon tapahtumat, lainat ja kuittilinkit poistetaan pysyvästi.",
+    tx_delete_confirm_title: "Poistetaanko tämä tapahtuma?", tx_delete_confirm_warning: "Tätä ei voi perua.",
     overview_recorded: "Kirjattu tähän mennessä", overview_projected: "Ennuste koko vuodelle",
     overview_projected_note: "Kirjatut tapahtumat plus aktiiviset toistuvat sarjat vietynä joulukuulle asti, olettaen että ne jatkuvat kuten asetettu. Tämä on ennuste, ei kirjanpito, veroraportti käyttää aina vain todella kirjattuja tapahtumia.",
     overview_total_income: "Tulot yhteensä", overview_total_costs: "Kulut yhteensä", overview_net_result: "Nettotulos",
@@ -1185,6 +1189,25 @@ function Modal({ title, onClose, children }) {
         {children}
       </div>
     </div>
+  );
+}
+/* A dedicated, explicit delete confirmation, replacing plain window.confirm() popups.
+   Shows exactly what will be removed and requires a deliberate click on the red button,
+   nothing is deleted just from opening this or from pressing enter. */
+function ConfirmDeleteModal({ title, itemLines, warning, confirmLabel, cancelLabel, onConfirm, onCancel }) {
+  return (
+    <Modal title={title} onClose={onCancel}>
+      <div className="rounded border px-3 py-2 mb-3" style={{ borderColor: LINE, background: "#F7F5F0" }}>
+        {itemLines.map((line, i) => (
+          <div key={i} className="text-sm" style={{ color: INK }}>{line}</div>
+        ))}
+      </div>
+      {warning && <div className="text-xs mb-4" style={{ color: RUST }}>{warning}</div>}
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancel} className="text-sm px-3 py-2 rounded border" style={{ borderColor: LINE, color: INK }}>{cancelLabel}</button>
+        <button onClick={onConfirm} className="text-sm px-3 py-2 rounded font-medium" style={{ background: RUST, color: "#fff" }}>{confirmLabel}</button>
+      </div>
+    </Modal>
   );
 }
 function RowLine({ label, value, bold, negative, accent }) {
@@ -2277,6 +2300,7 @@ function OverviewTab({ apartments, year, apartmentTotals, apartmentTotalsProject
 
 function TransactionsTab({ apartments, transactions, filterApartmentId, setFilterApartmentId, year, onAdd, onEdit, onDelete, onManageRecurring, recurringCount, onBulkImport, t }) {
   const nameFor = (id) => apartments.find((a) => a.id === id)?.name || "Unknown";
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
   const rows = transactions
     .filter((tx) => new Date(tx.date).getFullYear() === year)
     .filter((tx) => filterApartmentId === "all" || tx.apartmentId === filterApartmentId)
@@ -2322,16 +2346,33 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
                 {tx.type === "income" ? "+" : "\u2212"}{eur(tx.amount)}
               </div>
               <button onClick={() => onEdit(tx)} className="p-1 shrink-0 text-xs" style={{ color: TEAL }}>{t("btn_edit")}</button>
-              <button onClick={() => onDelete(tx.id)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>{t("btn_delete")}</button>
+              <button onClick={() => setConfirmingDelete(tx)} className="p-1 shrink-0 text-xs" style={{ color: MUTE }}>{t("btn_delete")}</button>
             </div>
           ))}
         </div>
+      )}
+      {confirmingDelete && (
+        <ConfirmDeleteModal
+          title={t("tx_delete_confirm_title")}
+          itemLines={[
+            `${dateFmt(confirmingDelete.date)} - ${catLabel(confirmingDelete.category)}${apartments.length > 1 ? " - " + nameFor(confirmingDelete.apartmentId) : ""}`,
+            `${confirmingDelete.type === "income" ? "+" : "\u2212"}${eur(confirmingDelete.amount)}`,
+            confirmingDelete.description || "",
+          ].filter(Boolean)}
+          warning={t("tx_delete_confirm_warning")}
+          confirmLabel={t("btn_delete_permanently")}
+          cancelLabel={t("btn_cancel")}
+          onCancel={() => setConfirmingDelete(null)}
+          onConfirm={() => { onDelete(confirmingDelete.id); setConfirmingDelete(null); }}
+        />
       )}
     </Section>
   );
 }
 
-function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, onAnalyze, t, lang }) {
+function ApartmentsTab({ apartments, transactions, year, apartmentTotals, onAdd, onEdit, onDelete, onAnalyze, t, lang }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
+  const txCountFor = (id) => transactions.filter((tx) => tx.apartmentId === id).length;
   return (
     <Section title={t("apt_title")} right={
       <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>{t("apt_add")}</button>
@@ -2362,7 +2403,7 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                   <div className="flex items-center gap-2">
                     <button onClick={() => onAnalyze(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: TEAL, color: TEAL }}>{t("apt_analysis_button")}</button>
                     <button onClick={() => onEdit(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: LINE, color: INK }}>{t("btn_edit")}</button>
-                    <button onClick={() => { if (confirm(`Remove ${a.name} and all its transactions?`)) onDelete(a.id); }} className="text-xs p-1.5" style={{ color: RUST }}>{t("btn_delete")}</button>
+                    <button onClick={() => setConfirmingDelete(a)} className="text-xs p-1.5" style={{ color: RUST }}>{t("btn_delete")}</button>
                   </div>
                 </div>
                 <div className="flex gap-5 mt-3 font-mono text-xs">
@@ -2403,6 +2444,21 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
             );
           })}
         </div>
+      )}
+      {confirmingDelete && (
+        <ConfirmDeleteModal
+          title={t("apt_delete_confirm_title")}
+          itemLines={[
+            confirmingDelete.name,
+            confirmingDelete.address || "",
+            `${txCountFor(confirmingDelete.id)} ${lang === "fi" ? "tapahtumaa poistetaan mukana" : "transactions will be deleted with it"}`,
+          ].filter(Boolean)}
+          warning={t("apt_delete_confirm_warning")}
+          confirmLabel={t("btn_delete_permanently")}
+          cancelLabel={t("btn_cancel")}
+          onCancel={() => setConfirmingDelete(null)}
+          onConfirm={() => { onDelete(confirmingDelete.id); setConfirmingDelete(null); }}
+        />
       )}
     </Section>
   );
@@ -2905,7 +2961,7 @@ function App() {
             onBulkImport={() => setShowBulkImport(true)} t={t} />
         )}
         {tab === "apartments" && (
-          <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
+          <ApartmentsTab apartments={apartments} transactions={transactions} year={year} apartmentTotals={apartmentTotals}
             onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment}
             onAnalyze={(a) => setAnalyzingApartment(a)} t={t} lang={language} />
         )}
