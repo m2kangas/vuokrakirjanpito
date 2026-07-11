@@ -37,92 +37,114 @@ const INCOME_CATEGORIES = [
 ];
 
 const EXPENSE_CATEGORIES = [
-  { id: "hoitovastike", fi: "Hoitovastike", en: "Maintenance fee", section: "deductible", note: "Fully deductible." },
+  { id: "hoitovastike", fi: "Hoitovastike", en: "Maintenance fee", section: "deductible",
+    note: "Fully deductible.", noteFi: "Vahennyskelpoinen kokonaan." },
   {
     id: "rahoitusvastike", fi: "Rahoitusvastike", en: "Financing fee", section: "deductible",
     note: "Deductible or capitalized depending on the apartment's financing fee setting. Set it once in the apartment's details.",
+    noteFi: "Vahennyskelpoisuus riippuu siita, tulouttaako taloyhtio tama vastikkeen kirjanpidossaan vai rahastoiko sen. Aseta valinta kerran asunnon tiedoissa.",
   },
   {
     id: "erityisvastike", fi: "Erityisvastike", en: "Special charge, for example a building wide internet service", section: "deductible",
     note: "Deductible or capitalized depending on the apartment's special charge setting, same rule as rahoitusvastike. Confirm with the isannoitsija. Set it once in the apartment's details.",
+    noteFi: "Sama saanto kuin rahoitusvastikkeessa: vahennyskelpoisuus riippuu siita, tulouttaako taloyhtio tama vastikkeen vai rahastoiko sen. Varmista isannoitsijalta. Aseta valinta kerran asunnon tiedoissa.",
   },
-  { id: "vesimaksu", fi: "Vesimaksu", en: "Water charge", section: "deductible", note: "Deductible." },
+  { id: "vesimaksu", fi: "Vesimaksu", en: "Water charge", section: "deductible",
+    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
   {
     id: "korjauskulut", fi: "Vuosikorjaus", en: "Annual repair costs", section: "deductible",
     note: "Deductible in full in the year paid. Use this when the work restores the apartment to its previous condition, for example fixing a leak or repainting.",
+    noteFi: "Vahennetaan kokonaan sen vuoden verotuksessa, jona meno on maksettu. Kayta tata, kun tyo palauttaa asunnon aiempaan kuntoon, esimerkiksi vuodon korjaus tai maalaus.",
   },
   {
     id: "perusparannus", fi: "Perusparannus", en: "Improvement or renovation", section: "capitalized",
     note: "Not deductible in the year paid. Use this when the work raises the apartment above its original standard. Default rule is straight line depreciation over 10 years, 10 percent per year, logged under Perusparannuksen poisto, or you can instead add the full amount to your acquisition cost at sale, not both. Confirm with Vero or your accountant if your situation differs.",
+    noteFi: "Ei vahennettava sen vuoden verotuksessa, jona meno on maksettu. Kayta tata, kun tyo nostaa asunnon tasoa yli aiemman kunnon. Yleissaanto on tasapoisto 10 vuoden aikana, 10 prosenttia vuodessa, merkitse Perusparannuksen poisto -kohtaan, tai vaihtoehtoisesti lisaa koko summa hankintamenoon myyntia varten, ei molempia. Varmista Verohallinnolta tai kirjanpitajalta, jos tilanteesi poikkeaa taman ohjeesta.",
   },
   {
     id: "perusparannuksen_poisto", fi: "Perusparannuksen poisto", en: "Depreciation of improvement costs", section: "deductible",
     note: "The standard method is 10 percent of the original improvement cost per year for 10 years. Enter this year's 10 percent instalment here.",
+    noteFi: "Yleissaanto on 10 prosentin tasapoisto alkuperaisesta perusparannusmenosta vuodessa, 10 vuoden ajan. Merkitse tahan taman vuoden 10 prosentin era.",
   },
   {
     id: "huoltopalvelut", fi: "Huolto- ja siivouspalvelut", en: "Maintenance and cleaning services", section: "deductible",
     note: "Deductible, for example cleaning, gardening, or snow removal that you pay for as the landlord.",
+    noteFi: "Vahennyskelpoinen, esimerkiksi siivous, pihatyot tai lumenluonti, jotka maksat vuokranantajana.",
   },
   {
     id: "sahko_vesi_lammitys", fi: "Sahko, vesi ja lammitys", en: "Electricity, water and heating paid by landlord", section: "deductible",
     note: "Deductible when you pay these yourself rather than the tenant.",
+    noteFi: "Vahennyskelpoinen, kun maksat nama itse etka vuokralainen.",
   },
   {
     id: "internet_puhelin", fi: "Internet ja puhelin", en: "Internet and phone", section: "deductible",
     note: "Deductible only in limited cases, for example a connection you provide as part of the rental, or a measurable increase in your own costs from managing the rental. Keep this modest and be ready to justify it.",
+    noteFi: "Vahennyskelpoinen vain rajatuissa tapauksissa, esimerkiksi liittyman, jonka tarjoat osana vuokrausta, tai todennettavan lisayksen omissa kuluissasi vuokraustoiminnan hoitamisesta. Pida maara maltillisena ja varaudu perustelemaan se.",
   },
-  { id: "vakuutus", fi: "Vakuutus", en: "Insurance", section: "deductible", note: "Deductible." },
+  { id: "vakuutus", fi: "Vakuutus", en: "Insurance", section: "deductible",
+    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
   {
     id: "kiinteistovero", fi: "Kiinteistovero", en: "Real estate tax", section: "deductible",
     note: "Deductible when you pay it directly, relevant mainly for a directly owned rental property. Not normally paid separately for a housing company apartment, that is already inside the hoitovastike.",
+    noteFi: "Vahennyskelpoinen, kun maksat sen itse suoraan, koskee lahinna suoraan omistettua vuokrakohdetta. Asunto-osakkeessa kiinteistovero on tavallisesti mukana hoitovastikkeessa, ei erillinen meno.",
   },
   {
     id: "hallintokulut", fi: "Hallintokulut", en: "Administration costs", section: "deductible",
     note: "Deductible, for example bookkeeping, help preparing the rental income report, or a credit check on a prospective tenant.",
+    noteFi: "Vahennyskelpoinen, esimerkiksi kirjanpito, vuokratuloilmoituksen laadinnan apu tai vuokralaisehdokkaan luottotietojen tarkistus.",
   },
   {
     id: "matkakulut", fi: "Matkakulut", en: "Travel costs", section: "deductible",
     note: "Deductible for necessary trips to show, inspect, or service the apartment.",
+    noteFi: "Vahennyskelpoinen valttamattomista matkoista, kuten asunnon esittely, tarkastus tai huolto.",
   },
-  { id: "valityspalkkio", fi: "Valityspalkkio", en: "Rental agent fee", section: "deductible", note: "Deductible." },
-  { id: "ilmoituskulut", fi: "Ilmoituskulut", en: "Advertising for tenant", section: "deductible", note: "Deductible." },
+  { id: "valityspalkkio", fi: "Valityspalkkio", en: "Rental agent fee", section: "deductible",
+    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
+  { id: "ilmoituskulut", fi: "Ilmoituskulut", en: "Advertising for tenant", section: "deductible",
+    note: "Deductible.", noteFi: "Vahennyskelpoinen." },
   {
     id: "perinta_oikeudenkaynti", fi: "Perinta- ja oikeudenkaytikulut", en: "Rent collection and legal costs", section: "deductible",
     note: "Deductible, for example costs of chasing unpaid rent or ending a tenancy.",
+    noteFi: "Vahennyskelpoinen, esimerkiksi maksamattoman vuokran perinnasta tai vuokrasuhteen paattamisesta aiheutuvat kulut.",
   },
   {
     id: "lainanhoitokulut", fi: "Lainanhoitokulut", en: "Loan service and arrangement fees", section: "deductible",
     note: "Deductible directly against rental income, unlike interest itself.",
+    noteFi: "Vahennetaan suoraan vuokratulosta, toisin kuin itse korot.",
   },
   {
     id: "lainan_korot", fi: "Lainan korot", en: "Loan interest", section: "interest",
     note: "Not deducted directly against this apartment's rent. Reduces your total capital income in its own box, so it is reported separately. Only deductible if the rent charged is at least market rate.",
+    noteFi: "Ei vahenneta suoraan taman asunnon vuokratulosta, vaan omasta pääomatuloista vähennettävästä korkojen kohdasta erikseen. Vähennysoikeus edellyttää, että perit vuokralaiselta käyvän vuokran, muuten korkoja ei voi vähentää lainkaan.",
   },
   {
     id: "irtaimisto_poisto", fi: "Irtaimiston poisto", en: "Depreciation of movables", section: "deductible",
     note: "Typically 25% per year on the remaining balance. Use this if you deduct the actual cost of furniture and appliances you bought for the apartment.",
+    noteFi: "Tavallisesti 25 prosentin menojaannospoisto vuodessa. Kayta tata, jos vahennat asuntoon ostamiesi kalusteiden ja kodinkoneiden todelliset hankintakustannukset.",
   },
   {
     id: "kalustevahennys", fi: "Kalustevahennys, kaavamainen", en: "Furnished apartment standard deduction", section: "deductible",
     note: "A flat monthly amount Vero sets each year for a furnished apartment, as an alternative to tracking actual furniture and appliance costs. Use either this or Irtaimiston poisto for a given apartment and year, not both. Check the current euro amount on Vero's site before using this.",
+    noteFi: "Verohallinnon vuosittain vahvistama kiintea kuukausimaara kalustetulle asunnolle, vaihtoehtona todellisten kaluste- ja kodinkonekulujen seurannalle. Kayta taman tai Irtaimiston poisto -kohtaa samalle asunnolle ja vuodelle, ei molempia. Tarkista voimassa oleva euromaara vero.fi-sivulta.",
   },
-  { id: "muu_kulu", fi: "Muu kulu", en: "Other cost", section: "deductible", note: "Deductible if it relates to the rental activity." },
+  { id: "muu_kulu", fi: "Muu kulu", en: "Other cost", section: "deductible",
+    note: "Deductible if it relates to the rental activity.", noteFi: "Vahennyskelpoinen, jos liittyy vuokraustoimintaan." },
 ];
 
 const CONFIGURABLE_SECTION = {
   rahoitusvastike: {
     settingKey: "rahoitusvastikeTreatment",
     options: [
-      { value: "income", label: "Booked as income by the housing company", section: "deductible" },
-      { value: "fund", label: "Booked to a fund or used for loan amortization", section: "capitalized" },
+      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtio tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtio rahastoi vastikkeen tai kayttaa sen lainan lyhennykseen", section: "capitalized" },
     ],
     defaultValue: "income",
   },
   erityisvastike: {
     settingKey: "erityisvastikeTreatment",
     options: [
-      { value: "income", label: "Booked as income by the housing company", section: "deductible" },
-      { value: "fund", label: "Booked to a fund or used for loan amortization", section: "capitalized" },
+      { value: "income", label: "Booked as income by the housing company", labelFi: "Taloyhtio tulouttaa vastikkeen kirjanpidossaan", section: "deductible" },
+      { value: "fund", label: "Booked to a fund or used for loan amortization", labelFi: "Taloyhtio rahastoi vastikkeen tai kayttaa sen lainan lyhennykseen", section: "capitalized" },
     ],
     defaultValue: "income",
   },
@@ -195,9 +217,44 @@ const TRANSLATIONS = {
     recurring_title: "Recurring transactions", recurring_pause: "Pause", recurring_resume: "Resume", recurring_delete: "Delete series",
     bulk_title: "Import receipts from Drive", bulk_pick_file: "Pick a file", bulk_pick_folder: "Pick a folder",
     field_apartment: "Apartment", field_receipt: "Receipt or invoice, optional (image or PDF)",
+    field_receipt_replace: "Replace receipt or invoice, optional (image or PDF)",
     field_category: "Category", field_date: "Date", field_amount: "Amount, EUR", field_description: "Description, optional",
     income: "Income", cost: "Cost",
     modal_add_transaction: "Add transaction", modal_edit_transaction: "Edit transaction",
+    word_deductible: "deductible", word_capitalized: "capitalized",
+    apt_field_company_id: "Housing company Y-tunnus, optional", apt_field_unit_number: "Huoneiston numero, optional",
+    apt_field_rv_treatment: "How the housing company books the rahoitusvastike",
+    apt_field_ev_description: "Erityisvastike, what does it cover, leave blank if none",
+    apt_field_ev_treatment: "How the housing company books the erityisvastike",
+    tx_current_receipt: "Current receipt", tx_replaces_note: "Choosing a new file below replaces it.",
+    tx_reading_receipt: "Reading receipt...", tx_fill_from_receipt: "Fill from receipt with Gemini",
+    tx_review_note: "Review the filled-in fields below before saving, it's a best guess.",
+    tx_add_gemini_key_note: "Add your Gemini API key once to enable auto-fill from receipts.",
+    tx_save_gemini_key: "Save Gemini key",
+    tx_recurring_edit_note: "This entry belongs to a recurring series. Editing it only changes this one month, manage the whole series from the Recurring button in Transactions.",
+    tx_repeat_monthly: "Repeat monthly from this date",
+    tx_stop_after_month: "Stop after month, optional (leave blank for no end)",
+    tx_saving: "Saving...",
+    tax_banner: "Structured like the Finnish rental income report (vuokratulot, form 7H, official form number 3011). Vuosikorjaus is deductible in full, perusparannus is not and gets depreciated over 10 years or capitalized instead. Loan interest is shown separately, it reduces your total capital income rather than this apartment's rental result, and under Vero's rules is not deductible at all if you charge below market rent. The PDF summary mirrors the official form's five numbered lines per apartment, hoitovastike and vesimaksu combine into one line there, matching Vero's own layout. This report only ever counts transactions you have actually recorded, not planned recurring ones still ahead of today, that full year budget view lives on the Overview tab instead. This is a starting point for your own filing, not tax advice.",
+    setup_title: "Vuokrakirjanpito setup", setup_intro: "This runs entirely in your browser and stores data in your own Google Drive. Nothing goes through any other server.",
+    setup_client_id: "Google OAuth Client ID", setup_api_key: "Google API key", setup_email: "Your Google account email",
+    setup_email_note: "After you sign in, the app checks the signed-in account against this address and signs out anything else. This is a convenience check, not the real security boundary, that is Google's own sign-in and your OAuth consent screen's test user list.",
+    setup_save: "Save", setup_connect: "Connect Google Drive", setup_loading_google: "Loading Google...",
+    setup_choose_folder: "Choose or create a Drive folder", setup_or_paste: "or, if that does not work here",
+    setup_paste_folder_link: "Paste a Google Drive folder link", setup_checking: "Checking...", setup_use_this_folder: "Use this folder",
+    setup_paste_note: "Open the folder in Google Drive (app or browser), tap Share or the address bar, copy the link, paste it here. This uses your Drive connection directly and skips Google's folder picker widget, useful if that widget misbehaves in your browser, which happens more often on mobile.",
+    setup_reset_creds: "Reset credentials",
+    loading_from_drive: "Loading from Drive...",
+    recurring_empty: "No recurring series yet. Tick \"Repeat monthly\" when adding a transaction to start one.",
+    bulk_gemini_needed: "Add your Gemini API key in Settings first, this needs it to read the receipts.",
+    bulk_scan_note: "A folder is scanned one level deep only, subfolders inside it are not included. Nothing is saved until you review the list below and click Import.",
+    bulk_include: "Include", bulk_remove: "Remove", bulk_choose_apartment: "Choose apartment",
+    bulk_import_n: "Import {n} transaction(s)",
+    settings_reconnect_note: "If you changed the Client ID or Google API key, click Reconnect Google in the header afterward.",
+    settings_or_paste: "or, if the picker does not work here",
+    settings_paste_folder_link: "Paste a Google Drive folder link",
+    settings_use_this_folder: "Use this folder", settings_checking: "Checking...",
+    settings_reset_confirm: "This clears all saved credentials and the folder link on this device. Your data in Drive is not deleted. Continue?",
   },
   fi: {
     nav_overview: "Yhteenveto", nav_transactions: "Tapahtumat", nav_apartments: "Asunnot", nav_tax: "Veroraportti",
@@ -239,9 +296,44 @@ const TRANSLATIONS = {
     recurring_title: "Toistuvat tapahtumat", recurring_pause: "Keskeyta", recurring_resume: "Jatka", recurring_delete: "Poista sarja",
     bulk_title: "Tuo kuitteja Drivesta", bulk_pick_file: "Valitse tiedosto", bulk_pick_folder: "Valitse kansio",
     field_apartment: "Asunto", field_receipt: "Kuitti tai lasku, valinnainen (kuva tai PDF)",
+    field_receipt_replace: "Korvaa kuitti tai lasku, valinnainen (kuva tai PDF)",
     field_category: "Kategoria", field_date: "Paivamaara", field_amount: "Maara, EUR", field_description: "Kuvaus, valinnainen",
     income: "Tulo", cost: "Kulu",
     modal_add_transaction: "Lisaa tapahtuma", modal_edit_transaction: "Muokkaa tapahtumaa",
+    word_deductible: "vahennyskelpoinen", word_capitalized: "hankintamenoon",
+    apt_field_company_id: "Taloyhtion Y-tunnus, valinnainen", apt_field_unit_number: "Huoneiston numero, valinnainen",
+    apt_field_rv_treatment: "Miten taloyhtio kirjaa rahoitusvastikkeen",
+    apt_field_ev_description: "Erityisvastike, mita se kattaa, jata tyhjaksi jos ei ole",
+    apt_field_ev_treatment: "Miten taloyhtio kirjaa erityisvastikkeen",
+    tx_current_receipt: "Nykyinen kuitti", tx_replaces_note: "Uuden tiedoston valitseminen alla korvaa sen.",
+    tx_reading_receipt: "Luetaan kuittia...", tx_fill_from_receipt: "Tayta kuitista Geminilla",
+    tx_review_note: "Tarkista alla olevat tiedot ennen tallennusta, tama on paras arvaus.",
+    tx_add_gemini_key_note: "Lisaa Gemini API -avain kerran, jotta kuittien automaattinen tayttäminen toimii.",
+    tx_save_gemini_key: "Tallenna Gemini-avain",
+    tx_recurring_edit_note: "Tama tapahtuma kuuluu toistuvaan sarjaan. Muokkaus vaikuttaa vain tahan kuukauteen, hallitse koko sarjaa Tapahtumat-valilehden Toistuvat-painikkeesta.",
+    tx_repeat_monthly: "Toistu kuukausittain tasta paivasta",
+    tx_stop_after_month: "Lopeta kuukauden jalkeen, valinnainen (jata tyhjaksi jos ei loppupaivaa)",
+    tx_saving: "Tallennetaan...",
+    tax_banner: "Rakenne noudattaa Suomen vuokratulojen veroilmoitusta (lomake 7H, lomakenumero 3011). Vuosikorjaus on kokonaan vahennyskelpoinen sen vuoden verotuksessa, jona se maksettiin, kun taas perusparannus ei ole, se poistetaan 10 vuoden aikana tai lisataan hankintamenoon. Lainan korot esitetaan erikseen: ne vahennetaan omasta pääomatulojen korko-kohdasta, ei suoraan taman asunnon vuokratulosta, ja Verohallinnon saannon mukaan korkoja ei voi vahentaa lainkaan, jos perimasi vuokra alittaa käyvän vuokran. PDF-yhteenveto noudattaa virallisen lomakkeen viittä numeroitua kohtaa asuntoa kohden, hoitovastike ja vesimaksu yhdistyvat lomakkeella yhdeksi riviksi, samoin kuin Verohallinnon omassa lomakkeessa. Tama raportti laskee ainoastaan todella kirjatut tapahtumat, ei suunniteltuja toistuvia tapahtumia, jotka ovat vielä tulevaisuudessa, se koko vuoden ennustenakyma loytyy Yhteenveto-valilehdelta. Tama on lahtokohta omaa ilmoitustasi varten, ei veroneuvontaa.",
+    setup_title: "Vuokrakirjanpito, kayttoonotto", setup_intro: "Tama toimii kokonaan selaimessasi ja tallentaa tiedot omaan Google Driveesi. Mikaan ei kulje muun palvelimen kautta.",
+    setup_client_id: "Google OAuth Client ID", setup_api_key: "Google API -avain", setup_email: "Google-tilisi sahkopostiosoite",
+    setup_email_note: "Kirjautumisen jalkeen sovellus tarkistaa, etta kirjautunut tili vastaa tata osoitetta, ja kirjaa muut ulos. Tama on mukavuustarkistus, ei varsinainen turvaraja, se on Googlen omassa kirjautumisessa ja OAuth-suostumusnaytön testikayttajalistalla.",
+    setup_save: "Tallenna", setup_connect: "Yhdista Google Drive", setup_loading_google: "Ladataan Googlea...",
+    setup_choose_folder: "Valitse tai luo Drive-kansio", setup_or_paste: "tai, jos tama ei toimi tassa",
+    setup_paste_folder_link: "Liita Google Drive -kansion linkki", setup_checking: "Tarkistetaan...", setup_use_this_folder: "Kayta tata kansiota",
+    setup_paste_note: "Avaa kansio Google Drivessa (sovellus tai selain), napauta Jaa tai osoiterivia, kopioi linkki, liita se tahan. Tama kayttaa Drive-yhteyttasi suoraan ja ohittaa Googlen kansiovalitsimen, hyodyllinen jos valitsin ei toimi selaimessasi, mika on yleisempaa mobiilissa.",
+    setup_reset_creds: "Nollaa kirjautumistiedot",
+    loading_from_drive: "Ladataan Drivesta...",
+    recurring_empty: "Ei toistuvia sarjoja vielä. Valitse \"Toistu kuukausittain\" tapahtumaa lisätessäsi aloittaaksesi.",
+    bulk_gemini_needed: "Lisaa Gemini API -avain ensin Asetuksista, sita tarvitaan kuittien lukemiseen.",
+    bulk_scan_note: "Kansio luetaan vain yhden tason syvyydelta, sen alikansioita ei kayda lapi. Mitaan ei tallenneta ennen kuin tarkistat listan alla ja painat Tuo.",
+    bulk_include: "Sisallyta", bulk_remove: "Poista", bulk_choose_apartment: "Valitse asunto",
+    bulk_import_n: "Tuo {n} tapahtuma(a)",
+    settings_reconnect_note: "Jos vaihdoit Client ID:n tai Google API -avaimen, paina Yhdista Google uudelleen -painiketta ylhaalla.",
+    settings_or_paste: "tai, jos valitsin ei toimi tassa",
+    settings_paste_folder_link: "Liita Google Drive -kansion linkki",
+    settings_use_this_folder: "Kayta tata kansiota", settings_checking: "Tarkistetaan...",
+    settings_reset_confirm: "Tama tyhjentaa kaikki tallennetut kirjautumistiedot ja kansiolinkin talla laitteella. Tietojasi Drivessa ei poisteta. Jatketaanko?",
   },
 };
 function makeT(lang) {
@@ -617,17 +709,19 @@ async function findOrCreateSpreadsheet(folderId) {
   return created.spreadsheetId;
 }
 
-function rvLabelFor(apartment) {
+function rvLabelFor(apartment, lang) {
   const opt = CONFIGURABLE_SECTION.rahoitusvastike.options.find(
     (o) => o.value === (apartment.rahoitusvastikeTreatment || "income")
   );
-  return opt ? opt.label : "";
+  if (!opt) return "";
+  return lang === "fi" ? opt.labelFi : opt.label;
 }
-function evLabelFor(apartment) {
+function evLabelFor(apartment, lang) {
   const opt = CONFIGURABLE_SECTION.erityisvastike.options.find(
     (o) => o.value === (apartment.erityisvastikeTreatment || "income")
   );
-  return opt ? opt.label : "";
+  if (!opt) return "";
+  return lang === "fi" ? opt.labelFi : opt.label;
 }
 
 async function syncSheet(folderId, apartments, transactions, onDone) {
@@ -736,7 +830,7 @@ function StatCard({ label, value, tone }) {
 }
 
 /* ---------- Setup screen: credentials, sign in, folder ---------- */
-function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen }) {
+function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen, t, language, setLang }) {
   const [clientId, setClientId] = useState(config.clientId || "");
   const [apiKey, setApiKey] = useState(config.apiKey || "");
   const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
@@ -747,13 +841,13 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
   const [folderLinkBusy, setFolderLinkBusy] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       if (window.gapi && window.google && window.google.accounts) {
         setGapiReady(true);
-        clearInterval(t);
+        clearInterval(timer);
       }
     }, 200);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, []);
 
   function saveCreds() {
@@ -805,10 +899,15 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-lg border p-6" style={{ borderColor: LINE, background: CARD }}>
-        <div className="text-base font-semibold mb-1" style={{ color: INK }}>Vuokrakirjanpito setup</div>
+        <div className="flex justify-end mb-2">
+          <div className="flex rounded border overflow-hidden text-xs" style={{ borderColor: LINE }}>
+            <button onClick={() => setLang("en")} className="px-2 py-1" style={{ background: language === "en" ? TEAL : "transparent", color: language === "en" ? "#fff" : MUTE }}>EN</button>
+            <button onClick={() => setLang("fi")} className="px-2 py-1" style={{ background: language === "fi" ? TEAL : "transparent", color: language === "fi" ? "#fff" : MUTE }}>FI</button>
+          </div>
+        </div>
+        <div className="text-base font-semibold mb-1" style={{ color: INK }}>{t("setup_title")}</div>
         <div className="text-sm mb-5" style={{ color: MUTE }}>
-          This runs entirely in your browser and stores data in your own Google Drive. Nothing goes through
-          any other server.
+          {t("setup_intro")}
         </div>
 
         {error && (
@@ -817,28 +916,26 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
 
         {needsCreds && (
           <>
-            <Field label="Google OAuth Client ID">
+            <Field label={t("setup_client_id")}>
               <input className={inputCls} style={inputStyle} value={clientId}
                 placeholder="xxxxxxxx.apps.googleusercontent.com"
                 onChange={(e) => setClientId(e.target.value)} />
             </Field>
-            <Field label="Google API key">
+            <Field label={t("setup_api_key")}>
               <input className={inputCls} style={inputStyle} value={apiKey}
                 placeholder="AIza..." onChange={(e) => setApiKey(e.target.value)} />
             </Field>
-            <Field label="Your Google account email">
+            <Field label={t("setup_email")}>
               <input className={inputCls} style={inputStyle} value={allowedEmail}
                 placeholder="you@gmail.com" onChange={(e) => setAllowedEmail(e.target.value)} />
             </Field>
             <div className="text-xs mb-3" style={{ color: MUTE }}>
-              After you sign in, the app checks the signed-in account against this address and signs out
-              anything else. This is a convenience check, not the real security boundary, that is Google's
-              own sign-in and your OAuth consent screen's test user list.
+              {t("setup_email_note")}
             </div>
             <button onClick={saveCreds} disabled={!clientId.trim() || !apiKey.trim() || !allowedEmail.trim()}
               className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-40"
               style={{ background: TEAL, color: "#fff" }}>
-              Save
+              {t("setup_save")}
             </button>
           </>
         )}
@@ -847,17 +944,17 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
           <button onClick={connect} disabled={!gapiReady || busy}
             className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-40"
             style={{ background: TEAL, color: "#fff" }}>
-            {gapiReady ? "Connect Google Drive" : "Loading Google..."}
+            {gapiReady ? t("setup_connect") : t("setup_loading_google")}
           </button>
         )}
 
         {!needsCreds && signedIn && (
           <>
             <button onClick={pickFolder} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
-              Choose or create a Drive folder
+              {t("setup_choose_folder")}
             </button>
-            <div className="text-xs text-center my-2" style={{ color: MUTE }}>or, if that does not work here</div>
-            <Field label="Paste a Google Drive folder link">
+            <div className="text-xs text-center my-2" style={{ color: MUTE }}>{t("setup_or_paste")}</div>
+            <Field label={t("setup_paste_folder_link")}>
               <input className={inputCls} style={inputStyle} value={folderLink}
                 placeholder="https://drive.google.com/drive/folders/..."
                 onChange={(e) => setFolderLink(e.target.value)} />
@@ -865,12 +962,10 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
             {folderLinkError && <div className="text-xs mb-2" style={{ color: RUST }}>{folderLinkError}</div>}
             <button onClick={useFolderLink} disabled={!folderLink.trim() || folderLinkBusy}
               className="w-full py-2 rounded text-sm font-medium border disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
-              {folderLinkBusy ? "Checking..." : "Use this folder"}
+              {folderLinkBusy ? t("setup_checking") : t("setup_use_this_folder")}
             </button>
             <div className="text-xs mt-1" style={{ color: MUTE }}>
-              Open the folder in Google Drive (app or browser), tap Share or the address bar, copy the link, paste
-              it here. This uses your Drive connection directly and skips Google's folder picker widget, useful if
-              that widget misbehaves in your browser, which happens more often on mobile.
+              {t("setup_paste_note")}
             </div>
           </>
         )}
@@ -880,7 +975,7 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
             onClick={() => { localStorage.removeItem("vkp_config"); localStorage.removeItem("vkp_token"); window.location.reload(); }}
             className="w-full mt-3 py-2 rounded text-xs" style={{ color: MUTE }}
           >
-            Reset credentials
+            {t("setup_reset_creds")}
           </button>
         )}
       </div>
@@ -944,7 +1039,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
         {saved ? t("settings_saved") : t("settings_save")}
       </button>
       <div className="text-xs mt-1" style={{ color: MUTE }}>
-        If you changed the Client ID or Google API key, click Reconnect Google in the header afterward.
+        {t("settings_reconnect_note")}
       </div>
 
       <div className="mt-4 pt-4 border-t" style={{ borderColor: LINE }}>
@@ -952,8 +1047,8 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
         <button onClick={onPickFolder} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
           {t("settings_change_folder")}
         </button>
-        <div className="text-xs text-center mb-2" style={{ color: MUTE }}>or, if the picker does not work here</div>
-        <Field label="Paste a Google Drive folder link">
+        <div className="text-xs text-center mb-2" style={{ color: MUTE }}>{t("settings_or_paste")}</div>
+        <Field label={t("settings_paste_folder_link")}>
           <input className={inputCls} style={inputStyle} value={folderLink}
             placeholder="https://drive.google.com/drive/folders/..."
             onChange={(e) => setFolderLink(e.target.value)} />
@@ -961,12 +1056,12 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
         {folderLinkError && <div className="text-xs mb-2" style={{ color: RUST }}>{folderLinkError}</div>}
         <button onClick={useFolderLink} disabled={!folderLink.trim() || folderLinkBusy}
           className="w-full py-2 rounded text-sm font-medium border mb-2 disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
-          {folderLinkBusy ? "Checking..." : "Use this folder"}
+          {folderLinkBusy ? t("settings_checking") : t("settings_use_this_folder")}
         </button>
         <button onClick={onSignOut} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
           {t("settings_sign_out")}
         </button>
-        <button onClick={() => { if (confirm("This clears all saved credentials and the folder link on this device. Your data in Drive is not deleted. Continue?")) onResetEverything(); }}
+        <button onClick={() => { if (confirm(t("settings_reset_confirm"))) onResetEverything(); }}
           className="w-full py-2 rounded text-sm" style={{ color: RUST }}>
           {t("settings_reset")}
         </button>
@@ -976,7 +1071,7 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolder
 }
 
 /* ---------- Apartment form ---------- */
-function ApartmentFormModal({ initial, onClose, onSave, t }) {
+function ApartmentFormModal({ initial, onClose, onSave, t, lang }) {
   const [form, setForm] = useState(
     initial || {
       name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
@@ -986,6 +1081,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t }) {
   );
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
   const evConfig = CONFIGURABLE_SECTION.erityisvastike;
+  const optLabel = (o) => (lang === "fi" ? o.labelFi : o.label);
   return (
     <Modal onClose={onClose} title={initial ? t("apt_edit") : t("apt_add")}>
       <Field label={t("apt_field_name")}>
@@ -1001,11 +1097,11 @@ function ApartmentFormModal({ initial, onClose, onSave, t }) {
           onChange={(e) => setForm({ ...form, housingCompany: e.target.value })} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Housing company Y-tunnus, optional">
+        <Field label={t("apt_field_company_id")}>
           <input className={inputCls} style={inputStyle} value={form.companyId || ""} placeholder="1234567-8"
             onChange={(e) => setForm({ ...form, companyId: e.target.value })} />
         </Field>
-        <Field label="Huoneiston numero, optional">
+        <Field label={t("apt_field_unit_number")}>
           <input className={inputCls} style={inputStyle} value={form.unitNumber || ""} placeholder="e.g. A 4"
             onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} />
         </Field>
@@ -1014,25 +1110,25 @@ function ApartmentFormModal({ initial, onClose, onSave, t }) {
         <input type="number" min="0" max="100" className={inputCls} style={inputStyle} value={form.sharePercent}
           onChange={(e) => setForm({ ...form, sharePercent: e.target.value })} />
       </Field>
-      <Field label="How the housing company books the rahoitusvastike">
+      <Field label={t("apt_field_rv_treatment")}>
         <select className={inputCls} style={inputStyle} value={form.rahoitusvastikeTreatment || rvConfig.defaultValue}
           onChange={(e) => setForm({ ...form, rahoitusvastikeTreatment: e.target.value })}>
           {rvConfig.options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label} {o.section === "deductible" ? "(deductible)" : "(capitalized)"}</option>
+            <option key={o.value} value={o.value}>{optLabel(o)} {o.section === "deductible" ? `(${t("word_deductible")})` : `(${t("word_capitalized")})`}</option>
           ))}
         </select>
       </Field>
-      <Field label="Erityisvastike, what does it cover, leave blank if none">
+      <Field label={t("apt_field_ev_description")}>
         <input className={inputCls} style={inputStyle} value={form.erityisvastikeDescription}
           placeholder="e.g. Building internet service"
           onChange={(e) => setForm({ ...form, erityisvastikeDescription: e.target.value })} />
       </Field>
       {form.erityisvastikeDescription && (
-        <Field label="How the housing company books the erityisvastike">
+        <Field label={t("apt_field_ev_treatment")}>
           <select className={inputCls} style={inputStyle} value={form.erityisvastikeTreatment || evConfig.defaultValue}
             onChange={(e) => setForm({ ...form, erityisvastikeTreatment: e.target.value })}>
             {evConfig.options.map((o) => (
-              <option key={o.value} value={o.value}>{o.label} {o.section === "deductible" ? "(deductible)" : "(capitalized)"}</option>
+              <option key={o.value} value={o.value}>{optLabel(o)} {o.section === "deductible" ? `(${t("word_deductible")})` : `(${t("word_capitalized")})`}</option>
             ))}
           </select>
         </Field>
@@ -1051,7 +1147,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t }) {
 }
 
 /* ---------- Transaction form ---------- */
-function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, initial, onClose, onSave, t }) {
+function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, onSaveGeminiKey, initial, onClose, onSave, t, lang }) {
   const [form, setForm] = useState(
     initial
       ? {
@@ -1099,7 +1195,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         description: extracted.description || form.description,
       });
     } catch (e) {
-      setScanError("Could not read the receipt: " + e.message);
+      setScanError((lang === "fi" ? "Kuitin lukeminen epaonnistui: " : "Could not read the receipt: ") + e.message);
     }
     setScanning(false);
   }
@@ -1113,7 +1209,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
         const buf = await receiptFile.arrayBuffer();
         attachment = { __uploadFile: { name: receiptFile.name, mimeType: receiptFile.type || "application/octet-stream", buffer: buf } };
       } catch (e) {
-        setScanError("Could not read the file to attach: " + e.message);
+        setScanError((lang === "fi" ? "Liitteen lukeminen epaonnistui: " : "Could not read the file to attach: ") + e.message);
         setSaving(false);
         return;
       }
@@ -1139,12 +1235,12 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
 
       {initial && initial.attachmentName && !receiptFile && (
         <div className="text-xs mb-2" style={{ color: MUTE }}>
-          Current receipt: {initial.attachmentUrl ? (
+          {t("tx_current_receipt")}: {initial.attachmentUrl ? (
             <a href={initial.attachmentUrl} target="_blank" rel="noreferrer" className="underline" style={{ color: TEAL }}>{initial.attachmentName}</a>
-          ) : initial.attachmentName}. Choosing a new file below replaces it.
+          ) : initial.attachmentName}. {t("tx_replaces_note")}
         </div>
       )}
-      <Field label={initial ? "Replace receipt or invoice, optional (image or PDF)" : t("field_receipt")}>
+      <Field label={initial ? t("field_receipt_replace") : t("field_receipt")}>
         <input type="file" accept="image/*,application/pdf" className={inputCls} style={inputStyle}
           onChange={(e) => { setReceiptFile(e.target.files[0] || null); setScanError(""); }} />
       </Field>
@@ -1153,23 +1249,23 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
           <button onClick={scanReceipt} disabled={scanning} type="button"
             className="w-full py-2 rounded text-sm font-medium border disabled:opacity-50"
             style={{ borderColor: TEAL, color: TEAL }}>
-            {scanning ? "Reading receipt..." : "Fill from receipt with Gemini"}
+            {scanning ? t("tx_reading_receipt") : t("tx_fill_from_receipt")}
           </button>
           {scanError && <div className="text-xs mt-1" style={{ color: RUST }}>{scanError}</div>}
-          <div className="text-xs mt-1" style={{ color: MUTE }}>Review the filled-in fields below before saving, it's a best guess.</div>
+          <div className="text-xs mt-1" style={{ color: MUTE }}>{t("tx_review_note")}</div>
         </div>
       )}
       {receiptFile && !geminiApiKey && (
         <div className="mb-3 px-3 py-2 rounded border" style={{ borderColor: LINE }}>
           <div className="text-xs mb-2" style={{ color: MUTE }}>
-            Add your Gemini API key once to enable auto-fill from receipts.
+            {t("tx_add_gemini_key_note")}
           </div>
           <input className={inputCls} style={inputStyle} value={geminiKeyInput} placeholder="AIza... (from Google AI Studio)"
             onChange={(e) => setGeminiKeyInput(e.target.value)} />
           <button type="button" onClick={() => geminiKeyInput.trim() && onSaveGeminiKey(geminiKeyInput.trim())}
             disabled={!geminiKeyInput.trim()} className="w-full mt-2 py-1.5 rounded text-xs font-medium disabled:opacity-40"
             style={{ background: TEAL, color: "#fff" }}>
-            Save Gemini key
+            {t("tx_save_gemini_key")}
           </button>
         </div>
       )}
@@ -1191,7 +1287,9 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
             <option key={c.id} value={c.id}>{categoryLabelFor(c, apartments.find((a) => a.id === form.apartmentId))}</option>
           ))}
         </select>
-        {activeCat?.note && <div className="text-xs mt-1" style={{ color: MUTE }}>{activeCat.note}</div>}
+        {activeCat && (activeCat.noteFi || activeCat.note) && (
+          <div className="text-xs mt-1" style={{ color: MUTE }}>{lang === "fi" ? (activeCat.noteFi || activeCat.note) : activeCat.note}</div>
+        )}
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("field_date")}>
@@ -1210,18 +1308,17 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
 
       {initial && initial.recurringId && (
         <div className="text-xs mb-3 px-3 py-2 rounded" style={{ background: "#EEF2E9", color: "#4A5C3D" }}>
-          This entry belongs to a recurring series. Editing it only changes this one month, manage the whole series
-          from the Recurring button in Transactions.
+          {t("tx_recurring_edit_note")}
         </div>
       )}
       {!initial && (
         <>
           <label className="flex items-center gap-2 mb-3 text-sm" style={{ color: INK }}>
             <input type="checkbox" checked={repeatMonthly} onChange={(e) => setRepeatMonthly(e.target.checked)} />
-            Repeat monthly from this date
+            {t("tx_repeat_monthly")}
           </label>
           {repeatMonthly && (
-            <Field label="Stop after month, optional (leave blank for no end)">
+            <Field label={t("tx_stop_after_month")}>
               <input type="month" className={inputCls} style={inputStyle} value={repeatEndMonth}
                 onChange={(e) => setRepeatEndMonth(e.target.value)} />
             </Field>
@@ -1231,7 +1328,7 @@ function TransactionFormModal({ apartments, defaultApartmentId, geminiApiKey, on
 
       <button onClick={handleSave} disabled={!form.apartmentId || !(Number(form.amount) > 0) || saving}
         className="w-full mt-2 py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
-        {saving ? "Saving..." : initial ? t("btn_save_changes") : t("modal_add_transaction")}
+        {saving ? t("tx_saving") : initial ? t("btn_save_changes") : t("modal_add_transaction")}
       </button>
     </Modal>
   );
@@ -1243,7 +1340,7 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t 
     <Modal onClose={onClose} title={t("recurring_title")}>
       {templates.length === 0 ? (
         <div className="text-sm" style={{ color: MUTE }}>
-          No recurring series yet. Tick "Repeat monthly" when adding a transaction to start one.
+          {t("recurring_empty")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -1276,7 +1373,7 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t 
 }
 
 /* ---------- Bulk import from Drive ---------- */
-function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, t }) {
+function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, t, lang }) {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -1379,7 +1476,7 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, 
     <Modal onClose={onClose} title={t("bulk_title")}>
       {!geminiApiKey && (
         <div className="text-xs mb-3 px-3 py-2 rounded" style={{ background: "#FBEAE5", color: RUST }}>
-          Add your Gemini API key in Settings first, this needs it to read the receipts.
+          {t("bulk_gemini_needed")}
         </div>
       )}
       <div className="flex gap-2 mb-3">
@@ -1394,8 +1491,7 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, 
       </div>
       {progress && <div className="text-xs mb-3" style={{ color: MUTE }}>{progress}</div>}
       <div className="text-xs mb-3" style={{ color: MUTE }}>
-        A folder is scanned one level deep only, subfolders inside it are not included. Nothing is saved until you
-        review the list below and click Import.
+        {t("bulk_scan_note")}
       </div>
 
       {items.length > 0 && (
@@ -1405,27 +1501,27 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, 
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="text-xs font-medium truncate" style={{ color: INK }}>{it.fileName}</div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {it.status === "pending" && <span className="text-xs" style={{ color: MUTE }}>Reading...</span>}
-                  {it.status === "error" && <span className="text-xs" style={{ color: RUST }}>Failed</span>}
-                  <button onClick={() => removeItem(it.key)} type="button" className="text-xs" style={{ color: MUTE }}>Remove</button>
+                  {it.status === "pending" && <span className="text-xs" style={{ color: MUTE }}>{t("tx_reading_receipt")}</span>}
+                  {it.status === "error" && <span className="text-xs" style={{ color: RUST }}>{lang === "fi" ? "Epaonnistui" : "Failed"}</span>}
+                  <button onClick={() => removeItem(it.key)} type="button" className="text-xs" style={{ color: MUTE }}>{t("bulk_remove")}</button>
                 </div>
               </div>
               {it.status === "error" && <div className="text-xs mb-1" style={{ color: RUST }}>{it.error}</div>}
               {it.status === "done" && (
                 <>
                   <label className="flex items-center gap-1 text-xs mb-1" style={{ color: INK }}>
-                    <input type="checkbox" checked={it.include} onChange={() => toggleInclude(it.key)} /> Include
+                    <input type="checkbox" checked={it.include} onChange={() => toggleInclude(it.key)} /> {t("bulk_include")}
                   </label>
                   <select className={inputCls} style={{ ...inputStyle, marginBottom: 4 }} value={it.form.apartmentId}
                     onChange={(e) => updateItem(it.key, { apartmentId: e.target.value })}>
-                    <option value="">Choose apartment</option>
+                    <option value="">{t("bulk_choose_apartment")}</option>
                     {apartments.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                   <div className="grid grid-cols-2 gap-1 mb-1">
                     <select className={inputCls} style={inputStyle} value={it.form.type}
                       onChange={(e) => updateItem(it.key, { type: e.target.value, category: (e.target.value === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)[0].id })}>
-                      <option value="income">Income</option>
-                      <option value="expense">Cost</option>
+                      <option value="income">{t("income")}</option>
+                      <option value="expense">{t("cost")}</option>
                     </select>
                     <select className={inputCls} style={inputStyle} value={it.form.category}
                       onChange={(e) => updateItem(it.key, { category: e.target.value })}>
@@ -1447,7 +1543,7 @@ function BulkImportModal({ apartments, geminiApiKey, apiKey, onClose, onImport, 
       )}
 
       <button onClick={doImport} disabled={readyCount === 0} className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-40" style={{ background: TEAL, color: "#fff" }}>
-        Import {readyCount} transaction{readyCount === 1 ? "" : "s"}
+        {t("bulk_import_n", { n: readyCount })}
       </button>
     </Modal>
   );
@@ -1571,7 +1667,7 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
   );
 }
 
-function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, t }) {
+function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, t, lang }) {
   return (
     <Section title={t("apt_title")} right={
       <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>{t("apt_add")}</button>
@@ -1591,10 +1687,10 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                     <div className="text-xs mt-0.5" style={{ color: MUTE }}>
                       {t("apt_housing_company")}: {a.housingCompany || "not set"} - {t("apt_your_share")}: {a.sharePercent ?? 100}%
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: MUTE }}>Rahoitusvastike: {rvLabelFor(a)}</div>
+                    <div className="text-xs mt-0.5" style={{ color: MUTE }}>Rahoitusvastike: {rvLabelFor(a, lang)}</div>
                     {a.erityisvastikeDescription && (
                       <div className="text-xs mt-0.5" style={{ color: MUTE }}>
-                        Erityisvastike ({a.erityisvastikeDescription}): {evLabelFor(a)}
+                        Erityisvastike ({a.erityisvastikeDescription}): {evLabelFor(a, lang)}
                       </div>
                     )}
                     {a.notes && <div className="text-xs mt-1" style={{ color: MUTE }}>{a.notes}</div>}
@@ -1683,14 +1779,7 @@ function TaxReportTab({ apartments, transactions, recurringTemplates, year, taxA
     }>
       {pdfError && <div className="mb-3 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>{pdfError}</div>}
       <div className="text-xs mb-5 px-3 py-2 rounded" style={{ background: "#EEF2E9", color: "#4A5C3D" }}>
-        Structured like the Finnish rental income report (vuokratulot, form 7H, official form number 3011). Vuosikorjaus
-        is deductible in full, perusparannus is not and gets depreciated over 10 years or capitalized instead. Loan
-        interest is shown separately, it reduces your total capital income rather than this apartment's rental
-        result, and is not deductible at all if you charge below market rent. The PDF summary mirrors the official
-        form's five numbered lines per apartment, hoitovastike and vesimaksu combine into one line there, matching
-        Vero's own layout. This report only ever counts transactions you have actually recorded, not planned
-        recurring ones still ahead of today, that full year budget view lives on the Overview tab instead.
-        This is a starting point for your own filing, not tax advice.
+        {t("tax_banner")}
       </div>
       <div className="space-y-6">
         {relevantApartments.map((a) => {
@@ -2057,12 +2146,15 @@ function App() {
         error={error}
         onConfigSaved={(patch) => setConfig(saveConfig(patch))}
         onFolderChosen={(f) => { setFolder(f); saveConfig({ folderId: f.id, folderName: f.name }); }}
+        t={t}
+        language={language}
+        setLang={setLang}
       />
     );
   }
 
   if (!ready) {
-    return <div className="min-h-screen flex items-center justify-center text-sm" style={{ color: MUTE }}>Loading from Drive...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-sm" style={{ color: MUTE }}>{t("loading_from_drive")}</div>;
   }
 
   return (
@@ -2118,7 +2210,7 @@ function App() {
         )}
         {tab === "apartments" && (
           <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
-            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} t={t} />
+            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} t={t} lang={language} />
         )}
         {tab === "tax" && (
           <TaxReportTab apartments={apartments} transactions={transactions} recurringTemplates={recurringTemplates} year={year} taxApartmentId={taxApartmentId}
@@ -2126,16 +2218,16 @@ function App() {
         )}
       </main>
 
-      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} />}
-      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} />}
+      {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} lang={language} />}
+      {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} lang={language} />}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
-          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} t={t} />
+          geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} t={t} lang={language} />
       )}
       {editingTransaction && (
         <TransactionFormModal apartments={apartments} initial={editingTransaction}
           geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setEditingTransaction(null)}
-          onSave={(data) => updateTransaction(editingTransaction.id, data)} t={t} />
+          onSave={(data) => updateTransaction(editingTransaction.id, data)} t={t} lang={language} />
       )}
       {showRecurringModal && (
         <RecurringModal apartments={apartments} templates={recurringTemplates} onClose={() => setShowRecurringModal(false)}
@@ -2143,7 +2235,7 @@ function App() {
       )}
       {showBulkImport && (
         <BulkImportModal apartments={apartments} geminiApiKey={config.geminiApiKey} apiKey={config.apiKey}
-          onClose={() => setShowBulkImport(false)} onImport={bulkAddTransactions} t={t} />
+          onClose={() => setShowBulkImport(false)} onImport={bulkAddTransactions} t={t} lang={language} />
       )}
       {showSettingsModal && (
         <SettingsModal config={config} folder={folder} onClose={() => setShowSettingsModal(false)}
