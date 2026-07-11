@@ -248,6 +248,26 @@ async function driveReadFileBytes(fileId) {
   return res.arrayBuffer();
 }
 
+function extractFolderId(input) {
+  const s = input.trim();
+  const m = s.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  const m2 = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(s)) return s;
+  return null;
+}
+async function fetchFolderMeta(folderId) {
+  const res = await fetch(`${DRIVE}/files/${folderId}?fields=id,name,mimeType`, { headers: authHeaders() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message || `Drive returned ${res.status}`);
+  }
+  const data = await res.json();
+  if (data.mimeType !== "application/vnd.google-apps.folder") throw new Error("That link is not a folder.");
+  return { id: data.id, name: data.name };
+}
+
 function arrayBufferToBase64(buffer) {
   let binary = "";
   const bytes = new Uint8Array(buffer);
@@ -623,6 +643,9 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
   const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
   const [gapiReady, setGapiReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [folderLink, setFolderLink] = useState("");
+  const [folderLinkError, setFolderLinkError] = useState("");
+  const [folderLinkBusy, setFolderLinkBusy] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -662,6 +685,20 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
         .build();
       picker.setVisible(true);
     });
+  }
+
+  async function useFolderLink() {
+    const id = extractFolderId(folderLink);
+    if (!id) { setFolderLinkError("Could not find a folder ID in that link."); return; }
+    setFolderLinkBusy(true);
+    setFolderLinkError("");
+    try {
+      const meta = await fetchFolderMeta(id);
+      onFolderChosen(meta);
+    } catch (e) {
+      setFolderLinkError("Could not use that folder: " + e.message);
+    }
+    setFolderLinkBusy(false);
   }
 
   const needsCreds = !config.clientId || !config.apiKey;
@@ -716,9 +753,27 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
         )}
 
         {!needsCreds && signedIn && (
-          <button onClick={pickFolder} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
-            Choose or create a Drive folder
-          </button>
+          <>
+            <button onClick={pickFolder} className="w-full py-2.5 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>
+              Choose or create a Drive folder
+            </button>
+            <div className="text-xs text-center my-2" style={{ color: MUTE }}>or, if that does not work here</div>
+            <Field label="Paste a Google Drive folder link">
+              <input className={inputCls} style={inputStyle} value={folderLink}
+                placeholder="https://drive.google.com/drive/folders/..."
+                onChange={(e) => setFolderLink(e.target.value)} />
+            </Field>
+            {folderLinkError && <div className="text-xs mb-2" style={{ color: RUST }}>{folderLinkError}</div>}
+            <button onClick={useFolderLink} disabled={!folderLink.trim() || folderLinkBusy}
+              className="w-full py-2 rounded text-sm font-medium border disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
+              {folderLinkBusy ? "Checking..." : "Use this folder"}
+            </button>
+            <div className="text-xs mt-1" style={{ color: MUTE }}>
+              Open the folder in Google Drive (app or browser), tap Share or the address bar, copy the link, paste
+              it here. This uses your Drive connection directly and skips Google's folder picker widget, useful if
+              that widget misbehaves in your browser, which happens more often on mobile.
+            </div>
+          </>
         )}
 
         {!needsCreds && (
@@ -735,13 +790,16 @@ function SetupScreen({ config, signedIn, error, onConfigSaved, onFolderChosen })
 }
 
 /* ---------- Settings, non-destructive credential and folder updates ---------- */
-function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOut, onResetEverything }) {
+function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onFolderLink, onSignOut, onResetEverything }) {
   const [clientId, setClientId] = useState(config.clientId || "");
   const [apiKey, setApiKey] = useState(config.apiKey || "");
   const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey || "");
   const [allowedEmail, setAllowedEmail] = useState(config.allowedEmail || "");
   const [filerName, setFilerName] = useState(config.filerName || "");
   const [saved, setSaved] = useState(false);
+  const [folderLink, setFolderLink] = useState("");
+  const [folderLinkError, setFolderLinkError] = useState("");
+  const [folderLinkBusy, setFolderLinkBusy] = useState(false);
 
   function save() {
     onSave({
@@ -750,6 +808,20 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOu
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function useFolderLink() {
+    const id = extractFolderId(folderLink);
+    if (!id) { setFolderLinkError("Could not find a folder ID in that link."); return; }
+    setFolderLinkBusy(true);
+    setFolderLinkError("");
+    try {
+      const meta = await fetchFolderMeta(id);
+      onFolderLink(meta);
+    } catch (e) {
+      setFolderLinkError("Could not use that folder: " + e.message);
+    }
+    setFolderLinkBusy(false);
   }
 
   return (
@@ -780,6 +852,17 @@ function SettingsModal({ config, folder, onClose, onSave, onPickFolder, onSignOu
         <div className="text-xs mb-2" style={{ color: MUTE }}>Current Drive folder: {folder?.name || "none"}</div>
         <button onClick={onPickFolder} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
           Change Drive folder
+        </button>
+        <div className="text-xs text-center mb-2" style={{ color: MUTE }}>or, if the picker does not work here</div>
+        <Field label="Paste a Google Drive folder link">
+          <input className={inputCls} style={inputStyle} value={folderLink}
+            placeholder="https://drive.google.com/drive/folders/..."
+            onChange={(e) => setFolderLink(e.target.value)} />
+        </Field>
+        {folderLinkError && <div className="text-xs mb-2" style={{ color: RUST }}>{folderLinkError}</div>}
+        <button onClick={useFolderLink} disabled={!folderLink.trim() || folderLinkBusy}
+          className="w-full py-2 rounded text-sm font-medium border mb-2 disabled:opacity-40" style={{ borderColor: LINE, color: INK }}>
+          {folderLinkBusy ? "Checking..." : "Use this folder"}
         </button>
         <button onClick={onSignOut} className="w-full py-2 rounded text-sm font-medium border mb-2" style={{ borderColor: LINE, color: INK }}>
           Sign out of Google
@@ -1614,6 +1697,14 @@ function App() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+  function setFolderFromMeta(f) {
+    setFolder(f);
+    setConfig(saveConfig({ folderId: f.id, folderName: f.name }));
+    setShowSettingsModal(false);
+    setReady(false);
+    loadData(f.id);
+  }
+
   function pickFolderFromSettings() {
     if (!window.gapi || !currentToken) { setError("Connect Google Drive first, then change the folder."); return; }
     window.gapi.load("picker", () => {
@@ -1623,12 +1714,7 @@ function App() {
         .setCallback((data) => {
           if (data.action === google.picker.Action.PICKED) {
             const doc = data.docs[0];
-            const f = { id: doc.id, name: doc.name };
-            setFolder(f);
-            setConfig(saveConfig({ folderId: f.id, folderName: f.name }));
-            setShowSettingsModal(false);
-            setReady(false);
-            loadData(f.id);
+            setFolderFromMeta({ id: doc.id, name: doc.name });
           }
         }).build();
       picker.setVisible(true);
@@ -1896,7 +1982,7 @@ function App() {
       )}
       {showSettingsModal && (
         <SettingsModal config={config} folder={folder} onClose={() => setShowSettingsModal(false)}
-          onSave={(patch) => setConfig(saveConfig(patch))} onPickFolder={pickFolderFromSettings}
+          onSave={(patch) => setConfig(saveConfig(patch))} onPickFolder={pickFolderFromSettings} onFolderLink={setFolderFromMeta}
           onSignOut={signOutGoogle} onResetEverything={resetEverything} />
       )}
     </div>
