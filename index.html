@@ -207,6 +207,22 @@ const TRANSLATIONS = {
     apt_loan_payment: "Monthly payment, EUR", apt_loan_rate: "Interest rate, % per year, optional",
     apt_loan_add: "Add loan", apt_loan_note: "Remaining balance is estimated forward from the reference date using the payment and rate you give, it will not exactly match the bank's own schedule, refresh it whenever you get a new isannoitsijantodistus.",
     apt_loans_remaining: "Estimated remaining loan",
+    apt_invest_title: "Purchase and investment details, optional",
+    apt_purchase_price: "Purchase price (kauppahinta), EUR", apt_debt_free_price: "Debt-free price (velaton hinta), EUR",
+    apt_purchase_date: "Purchase date", apt_acquisition_costs: "One-off purchase costs (varainsiirtovero etc), EUR",
+    apt_own_equity: "Your own invested equity, EUR, optional",
+    apt_invest_note: "Debt-free price includes the apartment's share of company loans at purchase, ask for it from the kauppakirja or isannoitsijantodistus if unsure. Leave own equity blank to skip the cash-on-cash figure.",
+    apt_analysis_button: "Profitability", apt_analysis_title: "Profitability analysis",
+    apt_analysis_intro: "Based on transactions recorded for {year}. This mirrors the standard Finnish asuntosijoittaminen formulas, not a guarantee of future returns.",
+    apt_analysis_no_price: "Add a debt-free price or purchase price in Edit apartment to see yield percentages.",
+    apt_analysis_yield_title: "Rental yield", apt_analysis_rent_income: "Rent income",
+    apt_analysis_operating_costs: "Operating costs (excludes depreciation and loan service fees)",
+    apt_gross_yield: "Gross yield (bruttovuokratuotto)", apt_net_yield: "Net yield (nettovuokratuotto)",
+    apt_analysis_cashflow_title: "Cash flow", apt_analysis_all_costs: "All actual costs (including interest and capitalized items)",
+    apt_cash_flow: "Cash flow", apt_cash_flow_note: "Actual money in or out, including loan interest and financing fees booked to a fund, regardless of their tax treatment.",
+    apt_analysis_roe_title: "Return on your own equity", apt_cash_on_cash: "Cash-on-cash return",
+    apt_analysis_no_equity: "Add your own invested equity in Edit apartment to see a cash-on-cash return figure.",
+    apt_analysis_disclaimer: "These are standard investment ratios computed from your own recorded data and the figures you provide, not tax advice or a valuation, and different calculators define net yield and cash flow slightly differently.",
     tax_title: "Tax report", tax_all_separate: "All apartments, separate",
     tax_export_csv: "Export CSV", tax_download_pdf: "Download 7H summary PDF", tax_building_pdf: "Building PDF...",
     tax_get_blank_form: "Get blank 7H form", tax_open_sheet: "Open Sheet",
@@ -294,6 +310,22 @@ const TRANSLATIONS = {
     apt_loan_payment: "Kuukausierä, EUR", apt_loan_rate: "Korko, % vuodessa, valinnainen",
     apt_loan_add: "Lisää laina", apt_loan_note: "Jäljellä oleva määrä on arvio, laskettu eteenpäin viitepäivämäärästä antamallasi eräsuuruudella ja korolla, se ei täsmää täysin pankin omaan laskentaan. Päivitä tiedot aina, kun saat uuden isännöitsijäntodistuksen.",
     apt_loans_remaining: "Arvioitu jäljellä oleva laina",
+    apt_invest_title: "Ostotiedot ja sijoituslaskelma, valinnainen",
+    apt_purchase_price: "Kauppahinta, EUR", apt_debt_free_price: "Velaton hinta, EUR",
+    apt_purchase_date: "Ostopäivä", apt_acquisition_costs: "Kertaluonteiset hankintakulut (varainsiirtovero jne), EUR",
+    apt_own_equity: "Sijoittamasi oma pääoma, EUR, valinnainen",
+    apt_invest_note: "Velaton hinta sisältää asunnon osuuden yhtiön lainoista ostohetkellä, kysy tarvittaessa kauppakirjasta tai isännöitsijäntodistuksesta. Jätä oma pääoma tyhjäksi, jos et halua nähdä oman pääoman tuottoprosenttia.",
+    apt_analysis_button: "Kannattavuus", apt_analysis_title: "Kannattavuuslaskelma",
+    apt_analysis_intro: "Perustuu vuodelle {year} kirjattuihin tapahtumiin. Noudattaa yleisiä suomalaisen asuntosijoittamisen laskentakaavoja, ei takaa tulevaa tuottoa.",
+    apt_analysis_no_price: "Lisää velaton hinta tai kauppahinta Muokkaa asuntoa -näkymässä nähdäksesi tuottoprosentit.",
+    apt_analysis_yield_title: "Vuokratuotto", apt_analysis_rent_income: "Vuokratulot",
+    apt_analysis_operating_costs: "Käyttökulut (ei sisällä poistoja eikä lainanhoitokuluja)",
+    apt_gross_yield: "Bruttovuokratuotto", apt_net_yield: "Nettovuokratuotto",
+    apt_analysis_cashflow_title: "Kassavirta", apt_analysis_all_costs: "Kaikki todelliset kulut (mukaan lukien korot ja hankintamenoon lisätyt)",
+    apt_cash_flow: "Kassavirta", apt_cash_flow_note: "Todellinen rahavirta sisään ja ulos, mukaan lukien lainan korot ja rahastoidut vastikkeet, verokohtelusta riippumatta.",
+    apt_analysis_roe_title: "Oman pääoman tuotto", apt_cash_on_cash: "Oman pääoman tuottoprosentti",
+    apt_analysis_no_equity: "Lisää sijoittamasi oma pääoma Muokkaa asuntoa -näkymässä nähdäksesi oman pääoman tuottoprosentin.",
+    apt_analysis_disclaimer: "Nämä ovat tavanomaisia sijoitustunnuslukuja, laskettu omista kirjatuista tiedoistasi ja antamistasi luvuista, ei veroneuvontaa tai arviolausunto, ja eri laskurit määrittelevät nettotuoton ja kassavirran hieman eri tavoin.",
     tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
     tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
     tax_get_blank_form: "Hae tyhjä 7H-lomake", tax_open_sheet: "Avaa Sheet",
@@ -613,13 +645,18 @@ async function extractReceiptWithGemini(apiKey, base64, mimeType) {
 async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
   const prompt =
     "You are extracting structured facts about a Finnish housing company apartment (asunto-osake) from an " +
-    "isannoitsijantodistus (certificate from the property manager) or a similar official document. Return ONLY " +
-    "compact JSON, no markdown, no explanation, matching exactly this shape:\n" +
+    "isannoitsijantodistus (certificate from the property manager), a kauppakirja (purchase agreement), a " +
+    "lainaosuuslaskelma, or a similar official document. Return ONLY compact JSON, no markdown, no explanation, " +
+    "matching exactly this shape:\n" +
     '{"housingCompany":"<official name of the asunto-osakeyhtio, or empty string>",' +
     '"companyId":"<Y-tunnus in format 1234567-8, or empty string if not found>",' +
     '"unitNumber":"<huoneiston numero or tunnus, or empty string>",' +
     '"address":"<street address of the apartment if stated, or empty string>",' +
     '"summary":"<one or two sentence summary in Finnish of other key facts found in the document, for example pinta-ala, hoitovastike euro per kk, or empty string if nothing else relevant is stated>",' +
+    '"purchasePrice":<kauppahinta, the price actually paid to the seller in EUR, plain number, or null if not stated>,' +
+    '"debtFreePrice":<velaton hinta, purchase price plus the apartment share of company loans at the time of purchase, in EUR, plain number, or null if not stated>,' +
+    '"purchaseDate":"YYYY-MM-DD, the date of the kauppakirja, or empty string if not stated",' +
+    '"acquisitionCosts":<varainsiirtovero and other one-off purchase costs in EUR, plain number, or null if not stated>,' +
     '"loans":[{"name":"<loan name exactly as printed, for example RL3 OP-448/Ikkunat>","referenceBalance":<remaining lainaosuus in EUR for this specific apartment, plain number>,"referenceDate":"YYYY-MM-DD, the date this lainaosuus figure is valid as of","monthlyPayment":<the monthly rahoitusvastike euro amount tied to this loan for this apartment, plain number, or null if not stated>,"annualRatePercent":<the loan interest rate as a plain percent number, for example 5.45, or null if not stated>}]}\n' +
     'Only include a loan in "loans" if this specific apartment has a lainaosuus (loan share) listed for it, usually under a "Lainaosuudet" section tied to this huoneisto. Do not include company-wide loan totals that are not attributed to this apartment. Use an empty array if none are found. ' +
     "Do not guess or invent values that are not explicitly stated in the document, use an empty string or null instead.";
@@ -679,6 +716,23 @@ function computeApartmentYear(apartment, transactions, year) {
   const capitalizedTotal = capitalizedCategories.reduce((s, c) => s + byCategory[c.id], 0);
   const interestTotal = interestCategories.reduce((s, c) => s + byCategory[c.id], 0);
   return { byCategory, incomeTotal, expenseTotal, capitalizedTotal, interestTotal, deductibleCategories, capitalizedCategories, interestCategories, net: incomeTotal - expenseTotal };
+}
+
+/* Kannattavuuslaskelma: gross/net yield, cash flow, and cash-on-cash return, using the standard
+   Finnish asuntosijoittaminen formulas. Depreciation and loan service fees are excluded from the
+   yield's operating costs since they are non-cash or financing items, not running costs of the asset. */
+const YIELD_EXCLUDED_FROM_OPERATING_COSTS = ["irtaimisto_poisto", "perusparannuksen_poisto", "kalustevahennys", "lainanhoitokulut"];
+function computeInvestmentAnalysis(apartment, transactions, year) {
+  const r = computeApartmentYear(apartment, transactions, year);
+  const operatingCostCategories = r.deductibleCategories.filter((c) => YIELD_EXCLUDED_FROM_OPERATING_COSTS.indexOf(c.id) === -1);
+  const operatingCosts = operatingCostCategories.reduce((s, c) => s + r.byCategory[c.id], 0);
+  const debtFreePrice = Number(apartment.debtFreePrice) || Number(apartment.purchasePrice) || 0;
+  const grossYieldPercent = debtFreePrice > 0 ? (r.incomeTotal / debtFreePrice) * 100 : null;
+  const netYieldPercent = debtFreePrice > 0 ? ((r.incomeTotal - operatingCosts) / debtFreePrice) * 100 : null;
+  const cashFlow = r.incomeTotal - r.expenseTotal - r.interestTotal - r.capitalizedTotal;
+  const ownEquity = Number(apartment.ownEquity) || null;
+  const cashOnCashPercent = ownEquity ? (cashFlow / ownEquity) * 100 : null;
+  return { r, operatingCosts, operatingCostCategories, debtFreePrice, grossYieldPercent, netYieldPercent, cashFlow, ownEquity, cashOnCashPercent };
 }
 
 /* Maps our categories onto the five numbered lines of the actual Vero form 7H (3011), section 2. */
@@ -1149,6 +1203,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
       name: "", address: "", housingCompany: "", companyId: "", unitNumber: "", sharePercent: 50,
       rahoitusvastikeTreatment: "income", erityisvastikeDescription: "", erityisvastikeTreatment: "income",
       notes: "", loans: [],
+      purchasePrice: "", debtFreePrice: "", purchaseDate: "", acquisitionCosts: "", ownEquity: "",
     }
   );
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
@@ -1192,6 +1247,10 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         address: extracted.address || form.address,
         notes: extracted.summary ? (form.notes ? `${form.notes}\n${extracted.summary}` : extracted.summary) : form.notes,
         loans: scannedLoans.length ? scannedLoans : (form.loans || []),
+        purchasePrice: extracted.purchasePrice != null ? String(extracted.purchasePrice) : form.purchasePrice,
+        debtFreePrice: extracted.debtFreePrice != null ? String(extracted.debtFreePrice) : form.debtFreePrice,
+        purchaseDate: extracted.purchaseDate || form.purchaseDate,
+        acquisitionCosts: extracted.acquisitionCosts != null ? String(extracted.acquisitionCosts) : form.acquisitionCosts,
       });
     } catch (e) {
       setDocError((lang === "fi" ? "Asiakirjan lukeminen epäonnistui: " : "Could not read the document: ") + e.message);
@@ -1311,12 +1370,42 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         </button>
         <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_loan_note")}</div>
       </div>
+      <div className="mb-3">
+        <div className="text-xs mb-2" style={{ color: MUTE }}>{t("apt_invest_title")}</div>
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          <Field label={t("apt_purchase_price")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.purchasePrice || ""}
+              onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
+          </Field>
+          <Field label={t("apt_debt_free_price")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.debtFreePrice || ""}
+              onChange={(e) => setForm({ ...form, debtFreePrice: e.target.value })} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          <Field label={t("apt_purchase_date")}>
+            <input type="date" className={inputCls} style={inputStyle} value={form.purchaseDate || ""}
+              onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} />
+          </Field>
+          <Field label={t("apt_acquisition_costs")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.acquisitionCosts || ""}
+              onChange={(e) => setForm({ ...form, acquisitionCosts: e.target.value })} />
+          </Field>
+        </div>
+        <Field label={t("apt_own_equity")}>
+          <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.ownEquity || ""}
+            onChange={(e) => setForm({ ...form, ownEquity: e.target.value })} />
+        </Field>
+        <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_invest_note")}</div>
+      </div>
       <Field label={t("apt_field_notes")}>
         <textarea className={inputCls} style={{ ...inputStyle, minHeight: 60 }} value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })} />
       </Field>
       <button onClick={() => form.name.trim() && onSave({
           ...form, sharePercent: Number(form.sharePercent) || 0,
+          purchasePrice: Number(form.purchasePrice) || 0, debtFreePrice: Number(form.debtFreePrice) || 0,
+          acquisitionCosts: Number(form.acquisitionCosts) || 0, ownEquity: Number(form.ownEquity) || 0,
           loans: loans.map((l) => ({
             id: l.id, name: l.name, referenceDate: l.referenceDate,
             referenceBalance: Number(l.referenceBalance) || 0,
@@ -1554,6 +1643,64 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t 
           })}
         </div>
       )}
+    </Modal>
+  );
+}
+
+/* ---------- Investment profitability analysis (kannattavuuslaskelma) ---------- */
+function InvestmentAnalysisModal({ apartment, transactions, year, t, lang, onClose }) {
+  const a = computeInvestmentAnalysis(apartment, transactions, year);
+  const hasPriceInfo = a.debtFreePrice > 0;
+  return (
+    <Modal onClose={onClose} title={`${t("apt_analysis_title")}: ${apartment.name}`}>
+      <div className="text-xs mb-4" style={{ color: MUTE }}>{t("apt_analysis_intro", { year })}</div>
+
+      {!hasPriceInfo && (
+        <div className="mb-4 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>
+          {t("apt_analysis_no_price")}
+        </div>
+      )}
+
+      <div className="rounded border p-3 mb-3" style={{ borderColor: LINE }}>
+        <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("apt_analysis_yield_title")}</div>
+        <RowLine label={t("apt_debt_free_price")} value={a.debtFreePrice} />
+        <RowLine label={t("apt_analysis_rent_income")} value={a.r.incomeTotal} />
+        <RowLine label={t("apt_analysis_operating_costs")} value={a.operatingCosts} negative />
+        <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm" style={{ borderColor: LINE }}>
+          <span style={{ color: INK }}>{t("apt_gross_yield")}</span>
+          <span className="font-mono font-semibold" style={{ color: INK }}>{a.grossYieldPercent != null ? a.grossYieldPercent.toFixed(2) + " %" : "-"}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span style={{ color: INK }}>{t("apt_net_yield")}</span>
+          <span className="font-mono font-semibold" style={{ color: TEAL }}>{a.netYieldPercent != null ? a.netYieldPercent.toFixed(2) + " %" : "-"}</span>
+        </div>
+      </div>
+
+      <div className="rounded border p-3 mb-3" style={{ borderColor: LINE }}>
+        <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("apt_analysis_cashflow_title")}</div>
+        <RowLine label={t("apt_analysis_rent_income")} value={a.r.incomeTotal} />
+        <RowLine label={t("apt_analysis_all_costs")} value={a.r.expenseTotal + a.r.interestTotal + a.r.capitalizedTotal} negative />
+        <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm" style={{ borderColor: LINE }}>
+          <span style={{ color: INK }}>{t("apt_cash_flow")}</span>
+          <span className="font-mono font-semibold" style={{ color: a.cashFlow >= 0 ? GREEN : RUST }}>{eur(a.cashFlow)}</span>
+        </div>
+        <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_cash_flow_note")}</div>
+      </div>
+
+      {a.ownEquity ? (
+        <div className="rounded border p-3 mb-3" style={{ borderColor: LINE }}>
+          <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("apt_analysis_roe_title")}</div>
+          <RowLine label={t("apt_own_equity")} value={a.ownEquity} />
+          <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm" style={{ borderColor: LINE }}>
+            <span style={{ color: INK }}>{t("apt_cash_on_cash")}</span>
+            <span className="font-mono font-semibold" style={{ color: a.cashOnCashPercent >= 0 ? GREEN : RUST }}>{a.cashOnCashPercent.toFixed(2)} %</span>
+          </div>
+        </div>
+      ) : (
+        <div className="text-xs mb-3" style={{ color: MUTE }}>{t("apt_analysis_no_equity")}</div>
+      )}
+
+      <div className="text-xs" style={{ color: MUTE }}>{t("apt_analysis_disclaimer")}</div>
     </Modal>
   );
 }
@@ -1853,7 +2000,7 @@ function TransactionsTab({ apartments, transactions, filterApartmentId, setFilte
   );
 }
 
-function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, t, lang }) {
+function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDelete, onAnalyze, t, lang }) {
   return (
     <Section title={t("apt_title")} right={
       <button onClick={onAdd} className="px-3 py-2 rounded text-sm font-medium" style={{ background: TEAL, color: "#fff" }}>{t("apt_add")}</button>
@@ -1882,6 +2029,7 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                     {a.notes && <div className="text-xs mt-1" style={{ color: MUTE }}>{a.notes}</div>}
                   </div>
                   <div className="flex items-center gap-2">
+                    <button onClick={() => onAnalyze(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: TEAL, color: TEAL }}>{t("apt_analysis_button")}</button>
                     <button onClick={() => onEdit(a)} className="text-xs px-2.5 py-1.5 rounded border" style={{ borderColor: LINE, color: INK }}>{t("btn_edit")}</button>
                     <button onClick={() => { if (confirm(`Remove ${a.name} and all its transactions?`)) onDelete(a.id); }} className="text-xs p-1.5" style={{ color: RUST }}>{t("btn_delete")}</button>
                   </div>
@@ -2070,6 +2218,7 @@ function App() {
   const [showTxForm, setShowTxForm] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [editingApartment, setEditingApartment] = useState(null);
+  const [analyzingApartment, setAnalyzingApartment] = useState(null);
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
   const [sheetSyncFailed, setSheetSyncFailed] = useState(false);
@@ -2409,7 +2558,8 @@ function App() {
         )}
         {tab === "apartments" && (
           <ApartmentsTab apartments={apartments} year={year} apartmentTotals={apartmentTotals}
-            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment} t={t} lang={language} />
+            onAdd={() => setShowApartmentForm(true)} onEdit={(a) => setEditingApartment(a)} onDelete={deleteApartment}
+            onAnalyze={(a) => setAnalyzingApartment(a)} t={t} lang={language} />
         )}
         {tab === "tax" && (
           <TaxReportTab apartments={apartments} transactions={transactions} recurringTemplates={recurringTemplates} year={year} taxApartmentId={taxApartmentId}
@@ -2419,6 +2569,9 @@ function App() {
 
       {showApartmentForm && <ApartmentFormModal onClose={() => setShowApartmentForm(false)} onSave={addApartment} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
       {editingApartment && <ApartmentFormModal initial={editingApartment} onClose={() => setEditingApartment(null)} onSave={(data) => updateApartment(editingApartment.id, data)} t={t} lang={language} geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} />}
+      {analyzingApartment && (
+        <InvestmentAnalysisModal apartment={analyzingApartment} transactions={transactions} year={year} t={t} lang={language} onClose={() => setAnalyzingApartment(null)} />
+      )}
       {showTxForm && (
         <TransactionFormModal apartments={apartments} defaultApartmentId={txApartmentFilter !== "all" ? txApartmentFilter : apartments[0]?.id}
           geminiApiKey={config.geminiApiKey} onSaveGeminiKey={saveGeminiKey} onClose={() => setShowTxForm(false)} onSave={addTransaction} t={t} lang={language} />
