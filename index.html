@@ -1009,7 +1009,12 @@ async function sheetsCreate(title) {
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({
       properties: { title },
-      sheets: [{ properties: { title: "Apartments" } }, { properties: { title: "Transactions" } }],
+      sheets: [
+        { properties: { title: "Apartments" } },
+        { properties: { title: "Transactions" } },
+        { properties: { title: "Loans" } },
+        { properties: { title: "Recurring" } },
+      ],
     }),
   });
   return res.json();
@@ -1024,6 +1029,22 @@ async function sheetsClearAndWrite(spreadsheetId, sheetName, rows) {
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ values: rows }),
   });
+}
+/* Older spreadsheets created before the Loans/Recurring tabs existed only have Apartments and
+   Transactions. Adds any missing tabs so sheetsClearAndWrite below never fails against a sheet
+   name that isn't there yet. */
+async function sheetsEnsureTabs(spreadsheetId, titles) {
+  const res = await fetch(`${SHEETS}/${spreadsheetId}?fields=sheets.properties.title`, { headers: authHeaders() });
+  const data = await res.json();
+  const existing = (data.sheets || []).map((s) => s.properties.title);
+  const missing = titles.filter((t) => existing.indexOf(t) === -1);
+  if (missing.length) {
+    await fetch(`${SHEETS}/${spreadsheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ requests: missing.map((title) => ({ addSheet: { properties: { title } } })) }),
+    });
+  }
 }
 
 async function findOrCreateSpreadsheet(folderId) {
@@ -1049,21 +1070,28 @@ function evLabelFor(apartment, lang) {
   return lang === "fi" ? opt.labelFi : opt.label;
 }
 
-async function syncSheet(folderId, apartments, transactions, onDone) {
+async function syncSheet(folderId, apartments, transactions, recurringTemplates, onDone) {
   try {
     const ssId = await findOrCreateSpreadsheet(folderId);
+    await sheetsEnsureTabs(ssId, ["Apartments", "Transactions", "Loans", "Recurring"]);
     const apRows = [
       [
-        "Name", "Address", "Housing company", "Your share %",
-        "Rahoitusvastike treatment", "Erityisvastike description", "Erityisvastike treatment", "Notes",
+        "Name", "Address", "Housing company", "Company ID (y-tunnus)", "Unit number", "Your share %",
+        "Rahoitusvastike treatment", "Erityisvastike description", "Erityisvastike treatment",
+        "Purchase price EUR", "Debt free price EUR", "Purchase date", "Acquisition costs EUR", "Own equity EUR",
+        "Personal loan amount EUR", "Personal loan start date", "Personal loan monthly payment EUR", "Personal loan annual rate %",
+        "Notes",
       ],
       ...apartments.map((a) => [
-        a.name || "", a.address || "", a.housingCompany || "", a.sharePercent ?? 100,
-        rvLabelFor(a), a.erityisvastikeDescription || "", a.erityisvastikeDescription ? evLabelFor(a) : "", a.notes || "",
+        a.name || "", a.address || "", a.housingCompany || "", a.companyId || "", a.unitNumber || "", a.sharePercent ?? 100,
+        rvLabelFor(a), a.erityisvastikeDescription || "", a.erityisvastikeDescription ? evLabelFor(a) : "",
+        a.purchasePrice || "", a.debtFreePrice || "", a.purchaseDate || "", a.acquisitionCosts || "", a.ownEquity || "",
+        a.personalLoanAmount || "", a.personalLoanStartDate || "", a.personalLoanPayment || "", a.personalLoanRate || "",
+        a.notes || "",
       ]),
     ];
     const txRows = [
-      ["Apartment", "Date", "Type", "Category (FI)", "Category (EN)", "Amount EUR", "Description"],
+      ["Apartment", "Date", "Type", "Category (FI)", "Category (EN)", "Amount EUR", "Description", "Recurring", "Receipt name", "Receipt link"],
       ...transactions
         .slice()
         .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -1071,16 +1099,41 @@ async function syncSheet(folderId, apartments, transactions, onDone) {
           const a = apartments.find((x) => x.id === t.apartmentId);
           return [
             a ? a.name : "", t.date, t.type, catLabel(t.category), catEn(t.category), t.amount, t.description || "",
+            t.recurringId ? "Yes" : "No", t.attachmentName || "", t.attachmentUrl || "",
           ];
         }),
     ];
+    const loanRows = [
+      ["Apartment", "Loan type", "Loan name", "Reference balance EUR", "Reference date", "Monthly payment EUR", "Annual rate %"],
+      ...apartments.flatMap((a) => (a.loans || []).map((l) => [
+        a.name || "", "Yhtion lainaosuus", l.name || "", l.referenceBalance || "", l.referenceDate || "", l.monthlyPayment || "", l.annualRatePercent || "",
+      ])),
+      ...apartments
+        .filter((a) => Number(a.personalLoanAmount) > 0)
+        .map((a) => [
+          a.name || "", "Oma laina", "Oma asuntolaina", a.personalLoanAmount || "", a.personalLoanStartDate || "", a.personalLoanPayment || "", a.personalLoanRate || "",
+        ]),
+    ];
+    const recurringRows = [
+      ["Apartment", "Type", "Category (FI)", "Category (EN)", "Amount EUR", "Description", "Day of month", "Start month", "End month", "Active"],
+      ...(recurringTemplates || []).map((rt) => {
+        const a = apartments.find((x) => x.id === rt.apartmentId);
+        return [
+          a ? a.name : "", rt.type || "", catLabel(rt.category), catEn(rt.category), rt.amount, rt.description || "",
+          rt.dayOfMonth || "", rt.startMonth || "", rt.endMonth || "", rt.active ? "Yes" : "No",
+        ];
+      }),
+    ];
     await sheetsClearAndWrite(ssId, "Apartments", apRows);
     await sheetsClearAndWrite(ssId, "Transactions", txRows);
+    await sheetsClearAndWrite(ssId, "Loans", loanRows);
+    await sheetsClearAndWrite(ssId, "Recurring", recurringRows);
     onDone && onDone(null, ssId);
   } catch (e) {
     onDone && onDone(e, null);
   }
 }
+
 
 /* ---------- small UI atoms ---------- */
 function Section({ title, eyebrow, children, right }) {
@@ -2657,7 +2710,7 @@ function App() {
       const savedAt = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
       setSyncStatus(`Saved to Drive at ${savedAt}`);
       setSheetSyncFailed(false);
-      syncSheet(folderId, ap, tx, (err, ssId) => {
+      syncSheet(folderId, ap, tx, templates, (err, ssId) => {
         const now = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
         if (err) { setSyncStatus(`Saved to Drive at ${savedAt}, sheet sync failed at ${now}`); setSheetSyncFailed(true); }
         else {
@@ -2685,7 +2738,7 @@ function App() {
   function retrySheetSync() {
     if (!folder) return;
     setSyncStatus("Retrying sheet sync...");
-    syncSheet(folder.id, apartments, transactions, (err, ssId) => {
+    syncSheet(folder.id, apartments, transactions, recurringTemplates, (err, ssId) => {
       const now = new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
       if (err) { setSyncStatus(`Sheet sync failed again at ${now}: ${err.message}`); setSheetSyncFailed(true); }
       else { setSyncStatus(`Saved to Drive and Sheet at ${now}`); setSheetSyncFailed(false); setSheetUrl(`https://docs.google.com/spreadsheets/d/${ssId}/edit`); }
