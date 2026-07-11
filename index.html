@@ -703,8 +703,35 @@ function monthsBetween(fromISO, toISO) {
   const to = new Date(toISO);
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
-function estimateLoanBalance(loan, asOfISO) {
-  const months = monthsBetween(loan.referenceDate, asOfISO);
+/* Counts how many month end dates (the last calendar day of a month) fall after fromISO and on or
+   before toISO. Used for loans whose lyhennys is booked on the last day of the month, so a month is
+   only counted as elapsed once its month end date has actually passed, not merely once the calendar
+   month has changed. */
+function countMonthEndsBetween(fromISO, toISO) {
+  const from = new Date(fromISO);
+  const to = new Date(toISO);
+  if (to <= from) return 0;
+  let y = from.getFullYear();
+  let m = from.getMonth();
+  let count = 0;
+  let guard = 0;
+  while (guard < 1200) {
+    guard++;
+    const monthEnd = new Date(y, m + 1, 0);
+    if (monthEnd <= from) {
+      m++; if (m > 11) { m = 0; y++; }
+      continue;
+    }
+    if (monthEnd > to) break;
+    count++;
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return count;
+}
+function estimateLoanBalance(loan, asOfISO, amortizesAtMonthEnd) {
+  const months = amortizesAtMonthEnd
+    ? countMonthEndsBetween(loan.referenceDate, asOfISO)
+    : monthsBetween(loan.referenceDate, asOfISO);
   if (months <= 0) return { balance: Number(loan.referenceBalance) || 0, monthsElapsed: 0 };
   let balance = Number(loan.referenceBalance) || 0;
   const payment = Number(loan.monthlyPayment) || 0;
@@ -812,6 +839,102 @@ function get7HLines(apartment, transactions, year) {
 }
 
 const VERO_7H_BLANK_URL = "https://www.vero.fi/contentassets/d1b13e41f36f4e89bafe967dd497d2ed/3011v25_ws.pdf";
+
+/* Builds the profitability analysis (kannattavuuslaskelma) as its own standalone PDF report,
+   mirroring the sections shown in InvestmentAnalysisModal, so it can be saved, printed or shared
+   on its own instead of only being visible as an in-app overlay. */
+async function generateInvestmentAnalysisPdf(apartment, transactions, recurringTemplates, year, lang) {
+  const fi = lang !== "en";
+  const a = computeInvestmentAnalysis(apartment, transactions, recurringTemplates, year);
+  const hasPersonalLoan = Number(apartment.personalLoanAmount) > 0 && apartment.personalLoanStartDate && Number(apartment.personalLoanPayment) > 0;
+  const debtService = hasPersonalLoan
+    ? annualDebtService(
+        { referenceDate: apartment.personalLoanStartDate, referenceBalance: apartment.personalLoanAmount, monthlyPayment: apartment.personalLoanPayment, annualRatePercent: apartment.personalLoanRate },
+        year
+      )
+    : null;
+  const operatingNet = a.r.incomeTotal - a.operatingCosts;
+  const cashFlowAfterFinancing = debtService ? operatingNet - debtService.interest - debtService.principal : null;
+
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const pageSize = [595.28, 841.89];
+  let page = doc.addPage(pageSize);
+  let y = 800;
+  const left = 50;
+  function ensureRoom(min) {
+    if (y < min) { page = doc.addPage(pageSize); y = 800; }
+  }
+  function line(text, opts = {}) {
+    ensureRoom((opts.gap ?? 15) + 30);
+    page.drawText(text, { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
+    y -= opts.gap ?? 15;
+  }
+  function row(label, value, opts = {}) {
+    const text = eur(value);
+    line(label, { size: opts.size ?? 10, gap: opts.gap ?? 15 });
+    page.drawText(text, { x: 545 - font.widthOfTextAtSize(text, opts.size ?? 10), y: y + (opts.gap ?? 15), size: opts.size ?? 10, font, color: rgb(0.1, 0.1, 0.1) });
+  }
+
+  line(fi ? `Kannattavuuslaskelma: ${apartment.name}` : `Profitability analysis: ${apartment.name}`, { bold: true, size: 14, gap: 22 });
+  line(fi ? `Verovuosi: ${year}` : `Year: ${year}`, { size: 10, gap: 20 });
+
+  if (!(a.debtFreePrice > 0)) {
+    line(fi ? "Velaton hinta puuttuu, tuottoprosentteja ei voida laskea." : "Debt free price missing, yield percentages cannot be calculated.", { size: 9, gap: 20 });
+  }
+
+  line(fi ? "VUOKRATUOTTO" : "RENTAL YIELD", { bold: true, size: 11, gap: 18 });
+  row(fi ? "Velaton hinta, EUR" : "Debt free price, EUR", a.debtFreePrice);
+  row(fi ? "Vuokratulot" : "Rental income", a.r.incomeTotal);
+  row(fi ? "Käyttökulut (ei sisällä poistoja eikä lainanhoitokuluja)" : "Operating costs (excludes depreciation and loan service)", -a.operatingCosts);
+  y -= 4;
+  line(fi ? `Bruttovuokratuotto: ${a.grossYieldPercent != null ? a.grossYieldPercent.toFixed(2) + " %" : "-"}` : `Gross yield: ${a.grossYieldPercent != null ? a.grossYieldPercent.toFixed(2) + " %" : "-"}`, { bold: true, size: 10 });
+  line(fi ? `Nettovuokratuotto: ${a.netYieldPercent != null ? a.netYieldPercent.toFixed(2) + " %" : "-"}` : `Net yield: ${a.netYieldPercent != null ? a.netYieldPercent.toFixed(2) + " %" : "-"}`, { bold: true, size: 10, gap: 22 });
+
+  line(fi ? "KASSAVIRTA" : "CASH FLOW", { bold: true, size: 11, gap: 18 });
+  row(fi ? "Vuokratulot" : "Rental income", a.r.incomeTotal);
+  row(fi ? "Kaikki todelliset kulut (mukaan lukien korot ja hankintamenoon lisätyt)" : "All actual costs (including interest and capitalized items)", -(a.r.expenseTotal + a.r.interestTotal + a.r.capitalizedTotal));
+  y -= 4;
+  line(fi ? `Kassavirta: ${eur(a.cashFlow)}` : `Cash flow: ${eur(a.cashFlow)}`, { bold: true, size: 10, gap: 22 });
+
+  if (hasPersonalLoan) {
+    line(fi ? "OMA RAHOITUS" : "PERSONAL FINANCING", { bold: true, size: 11, gap: 18 });
+    row(fi ? "Operatiivinen nettotulos (ennen rahoitusta)" : "Operating net result (before financing)", operatingNet);
+    row(fi ? "Korot tänä vuonna" : "Interest this year", -debtService.interest);
+    row(fi ? "Lyhennys tänä vuonna" : "Principal this year", -debtService.principal);
+    y -= 4;
+    line(fi ? `Kassavirta oman rahoituksen jälkeen: ${eur(cashFlowAfterFinancing)}` : `Cash flow after own financing: ${eur(cashFlowAfterFinancing)}`, { bold: true, size: 10 });
+    line(fi ? `Arvioitu jäljellä oleva oma laina: ${eur(debtService.balanceEnd)}` : `Estimated remaining personal loan: ${eur(debtService.balanceEnd)}`, { size: 10, gap: 22 });
+  } else {
+    line(fi ? "Ei omaa lainaa asetettu tälle asunnolle." : "No personal loan set for this apartment.", { size: 9, gap: 22 });
+  }
+
+  if (a.ownEquity) {
+    line(fi ? "OMAN PÄÄOMAN TUOTTO" : "RETURN ON EQUITY", { bold: true, size: 11, gap: 18 });
+    row(fi ? "Oma pääoma" : "Own equity", a.ownEquity);
+    y -= 4;
+    line(fi ? `Cash on cash tuotto: ${a.cashOnCashPercent.toFixed(2)} %` : `Cash on cash return: ${a.cashOnCashPercent.toFixed(2)} %`, { bold: true, size: 10, gap: 22 });
+  }
+
+  ensureRoom(60);
+  line(
+    fi
+      ? "Normalisoitu koko vuosi: vuokra ja vastikkeet on vuositasoitettu nykyisellä toistuvalla tasolla, yksittäiset kulut lasketaan mukaan täsmälleen sen verran kuin ne on kirjattu. Noudattaa yleisiä suomalaisen asuntosijoittamisen laskentakaavoja, ei takaa tulevaa tuottoa."
+      : "Normalized full year: rent and fees are annualized at the current recurring level, one off costs are counted exactly as recorded. Follows common Finnish rental investment formulas, does not guarantee future returns.",
+    { size: 7.5, gap: 11 }
+  );
+
+  const bytes = await doc.save();
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Kannattavuuslaskelma_${apartment.name.replace(/[^a-zA-Z0-9]+/g, "_")}_${year}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 async function generate7HSummaryPdf(apartments, transactions, year, filerName) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
@@ -1755,9 +1878,28 @@ function InvestmentAnalysisModal({ apartment, transactions, recurringTemplates, 
     : null;
   const operatingNet = a.r.incomeTotal - a.operatingCosts;
   const cashFlowAfterFinancing = debtService ? operatingNet - debtService.interest - debtService.principal : null;
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+  async function downloadAnalysisPdf() {
+    setPdfBusy(true);
+    setPdfError("");
+    try {
+      await generateInvestmentAnalysisPdf(apartment, transactions, recurringTemplates, year, lang);
+    } catch (e) {
+      setPdfError((lang === "en" ? "Could not create the PDF: " : "PDF:n luonti epäonnistui: ") + e.message);
+    }
+    setPdfBusy(false);
+  }
   return (
     <Modal onClose={onClose} title={`${t("apt_analysis_title")}: ${apartment.name}`}>
       <div className="text-xs mb-4" style={{ color: MUTE }}>{t("apt_analysis_intro", { year })}</div>
+
+      <div className="mb-4">
+        <button onClick={downloadAnalysisPdf} disabled={pdfBusy} className="px-3 py-2 rounded text-sm font-medium disabled:opacity-50" style={{ background: TEAL, color: "#fff" }}>
+          {pdfBusy ? (lang === "en" ? "Building PDF..." : "Luodaan PDF...") : (lang === "en" ? "Download as PDF report" : "Lataa erillisenä PDF-raporttina")}
+        </button>
+        {pdfError && <div className="mt-2 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>{pdfError}</div>}
+      </div>
 
       {!hasPriceInfo && (
         <div className="mb-4 px-3 py-2 rounded text-xs" style={{ background: "#FBEAE5", color: RUST }}>
@@ -2180,7 +2322,8 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                     {(() => {
                       const est = estimateLoanBalance(
                         { referenceDate: a.personalLoanStartDate, referenceBalance: a.personalLoanAmount, monthlyPayment: a.personalLoanPayment, annualRatePercent: a.personalLoanRate },
-                        new Date().toISOString().slice(0, 10)
+                        new Date().toISOString().slice(0, 10),
+                        true
                       );
                       return (
                         <div className="flex items-center justify-between text-xs font-mono mb-1" style={{ color: MUTE }}>
