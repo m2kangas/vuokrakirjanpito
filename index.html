@@ -2739,6 +2739,38 @@ function App() {
     }
   }
 
+  /* Manual full sync: pulls whatever is currently in Drive (in case it was edited from another
+     device or tab), then immediately pushes that same state straight back out to the Drive JSON
+     file and the Sheet mirror, so both directions are refreshed with one click regardless of
+     whether anything actually changed. */
+  const [syncingNow, setSyncingNow] = useState(false);
+  async function syncNow() {
+    if (!folder || syncingNow) return;
+    setSyncingNow(true);
+    setSyncStatus("Syncing...");
+    try {
+      const file = await driveFindFile(folder.id, DATA_FILE_NAME);
+      let loadedApartments = [];
+      let loadedTransactions = [];
+      let loadedTemplates = [];
+      if (file) {
+        const data = await driveReadJson(file.id);
+        loadedApartments = data.apartments || [];
+        loadedTransactions = data.transactions || [];
+        loadedTemplates = data.recurringTemplates || [];
+      }
+      const generated = generateDueRecurring(loadedTemplates, loadedTransactions);
+      const mergedTransactions = generated.length ? [...loadedTransactions, ...generated] : loadedTransactions;
+      setApartments(loadedApartments);
+      setRecurringTemplates(loadedTemplates);
+      setTransactions(mergedTransactions);
+      await persistData(loadedApartments, mergedTransactions, loadedTemplates, folder.id);
+    } catch (e) {
+      setError("Sync failed: " + e.message);
+    }
+    setSyncingNow(false);
+  }
+
   useEffect(() => {
     if (signedIn && folder) loadData(folder.id);
   }, [signedIn, folder]);
@@ -2917,6 +2949,9 @@ function App() {
             <div className="text-base font-semibold tracking-tight" style={{ color: INK }}>Vuokrakirjanpito</div>
             <div className="text-xs flex items-center gap-2" style={{ color: sheetSyncFailed ? RUST : MUTE }}>
               <span>Folder: {folder.name} {syncStatus && <span> - {syncStatus}</span>}</span>
+              <button onClick={syncNow} disabled={syncingNow} className="px-2 py-0.5 rounded border text-xs disabled:opacity-50" style={{ borderColor: LINE, color: INK }}>
+                {syncingNow ? (language === "fi" ? "Synkronoidaan..." : "Syncing...") : (language === "fi" ? "Synkronoi nyt" : "Sync now")}
+              </button>
               {sheetSyncFailed && (
                 <button onClick={retrySheetSync} className="px-2 py-0.5 rounded border text-xs" style={{ borderColor: RUST, color: RUST }}>
                   Retry sheet sync
