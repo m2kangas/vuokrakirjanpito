@@ -840,6 +840,18 @@ function get7HLines(apartment, transactions, year) {
 
 const VERO_7H_BLANK_URL = "https://www.vero.fi/contentassets/d1b13e41f36f4e89bafe967dd497d2ed/3011v25_ws.pdf";
 
+/* The standard PDF fonts (Helvetica etc, WinAnsi encoding) cannot encode several Unicode
+   punctuation characters that toLocaleString and normal typing produce, most importantly the
+   Unicode minus sign U+2212 used for negative currency amounts. Swap those for WinAnsi safe
+   equivalents before any page.drawText call, or PDF generation throws. */
+function pdfSafeText(s) {
+  return String(s)
+    .replace(/\u2212/g, "-")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"');
+}
+
 /* Builds the profitability analysis (kannattavuuslaskelma) as its own standalone PDF report,
    mirroring the sections shown in InvestmentAnalysisModal, so it can be saved, printed or shared
    on its own instead of only being visible as an in-app overlay. */
@@ -869,11 +881,11 @@ async function generateInvestmentAnalysisPdf(apartment, transactions, recurringT
   }
   function line(text, opts = {}) {
     ensureRoom((opts.gap ?? 15) + 30);
-    page.drawText(text, { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText(pdfSafeText(text), { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
     y -= opts.gap ?? 15;
   }
   function row(label, value, opts = {}) {
-    const text = eur(value);
+    const text = pdfSafeText(eur(value));
     line(label, { size: opts.size ?? 10, gap: opts.gap ?? 15 });
     page.drawText(text, { x: 545 - font.widthOfTextAtSize(text, opts.size ?? 10), y: y + (opts.gap ?? 15), size: opts.size ?? 10, font, color: rgb(0.1, 0.1, 0.1) });
   }
@@ -949,7 +961,7 @@ async function generate7HSummaryPdf(apartments, transactions, year, filerName) {
     if (y < min) { page = doc.addPage(pageSize); y = 800; }
   }
   function line(text, opts = {}) {
-    page.drawText(text, { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText(pdfSafeText(text), { x: opts.x ?? left, y, size: opts.size ?? 10, font: opts.bold ? bold : font, color: rgb(0.1, 0.1, 0.1) });
     y -= opts.gap ?? 15;
   }
   line("7H VUOKRATULOT - OSAKEHUONEISTOT, yhteenveto", { bold: true, size: 13, gap: 20 });
