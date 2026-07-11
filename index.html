@@ -224,6 +224,7 @@ const TRANSLATIONS = {
     apt_analysis_no_equity: "Add your own invested equity in Edit apartment to see a cash-on-cash return figure.",
     apt_analysis_disclaimer: "These are standard investment ratios computed from your own recorded data and the figures you provide, not tax advice or a valuation, and different calculators define net yield and cash flow slightly differently.",
     apt_personal_loan_title: "Personal mortgage (lainasopimus), optional",
+    apt_personal_loan_label: "Personal mortgage",
     apt_personal_loan_amount: "Loan amount drawn down, EUR", apt_personal_loan_start: "Draw-down or agreement date",
     apt_personal_loan_payment: "Monthly instalment (interest plus principal), EUR", apt_personal_loan_rate: "Interest rate, % per year",
     apt_personal_loan_note: "This is your own bank mortgage used to buy the apartment, separate from the housing company's loan share above. Upload the loan agreement with the document field near the top, or fill these in by hand.",
@@ -336,6 +337,7 @@ const TRANSLATIONS = {
     apt_analysis_no_equity: "Lisää sijoittamasi oma pääoma Muokkaa asuntoa -näkymässä nähdäksesi oman pääoman tuottoprosentin.",
     apt_analysis_disclaimer: "Nämä ovat tavanomaisia sijoitustunnuslukuja, laskettu omista kirjatuista tiedoistasi ja antamistasi luvuista, ei veroneuvontaa tai arviolausunto, ja eri laskurit määrittelevät nettotuoton ja kassavirran hieman eri tavoin.",
     apt_personal_loan_title: "Oma asuntolaina (lainasopimus), valinnainen",
+    apt_personal_loan_label: "Oma asuntolaina",
     apt_personal_loan_amount: "Nostettu lainamäärä, EUR", apt_personal_loan_start: "Nosto- tai sopimuspäivä",
     apt_personal_loan_payment: "Kuukausierä (korko ja lyhennys), EUR", apt_personal_loan_rate: "Korko, % vuodessa",
     apt_personal_loan_note: "Tämä on omaa asunnon ostoon otettua pankkilainaasi, eri asia kuin yllä oleva taloyhtiön lainaosuus. Lataa lainasopimus asiakirjakentän kautta ylhäällä, tai täytä tiedot käsin.",
@@ -2171,6 +2173,22 @@ function ApartmentsTab({ apartments, year, apartmentTotals, onAdd, onEdit, onDel
                         </div>
                       );
                     })}
+                  </div>
+                )}
+                {Number(a.personalLoanAmount) > 0 && a.personalLoanStartDate && Number(a.personalLoanPayment) > 0 && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: LINE }}>
+                    {(() => {
+                      const est = estimateLoanBalance(
+                        { referenceDate: a.personalLoanStartDate, referenceBalance: a.personalLoanAmount, monthlyPayment: a.personalLoanPayment, annualRatePercent: a.personalLoanRate },
+                        new Date().toISOString().slice(0, 10)
+                      );
+                      return (
+                        <div className="flex items-center justify-between text-xs font-mono mb-1" style={{ color: MUTE }}>
+                          <span>{t("apt_personal_loan_label")}</span>
+                          <span style={{ color: INK, fontWeight: 600 }}>{t("apt_personal_loan_remaining")}: {eur(est.balance)}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
