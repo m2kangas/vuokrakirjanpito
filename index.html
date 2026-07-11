@@ -223,6 +223,15 @@ const TRANSLATIONS = {
     apt_analysis_roe_title: "Return on your own equity", apt_cash_on_cash: "Cash-on-cash return",
     apt_analysis_no_equity: "Add your own invested equity in Edit apartment to see a cash-on-cash return figure.",
     apt_analysis_disclaimer: "These are standard investment ratios computed from your own recorded data and the figures you provide, not tax advice or a valuation, and different calculators define net yield and cash flow slightly differently.",
+    apt_personal_loan_title: "Personal mortgage (lainasopimus), optional",
+    apt_personal_loan_amount: "Loan amount drawn down, EUR", apt_personal_loan_start: "Draw-down or agreement date",
+    apt_personal_loan_payment: "Monthly instalment (interest plus principal), EUR", apt_personal_loan_rate: "Interest rate, % per year",
+    apt_personal_loan_note: "This is your own bank mortgage used to buy the apartment, separate from the housing company's loan share above. Upload the loan agreement with the document field near the top, or fill these in by hand.",
+    apt_analysis_financing_title: "Personal financing", apt_analysis_operating_net: "Net operating result (before financing)",
+    apt_analysis_interest_this_year: "Interest this year", apt_analysis_principal_this_year: "Principal repaid this year",
+    apt_cash_flow_after_financing: "Cash flow after your own financing", apt_personal_loan_remaining: "Estimated remaining mortgage",
+    apt_analysis_financing_note: "Interest and principal are split using standard amortizing loan math from the terms you gave, this can drift from the bank's own schedule over time, refresh it from a new loan statement if needed.",
+    apt_analysis_no_personal_loan: "Add your personal mortgage details in Edit apartment to see cash flow after financing.",
     tax_title: "Tax report", tax_all_separate: "All apartments, separate",
     tax_export_csv: "Export CSV", tax_download_pdf: "Download 7H summary PDF", tax_building_pdf: "Building PDF...",
     tax_get_blank_form: "Get blank 7H form", tax_open_sheet: "Open Sheet",
@@ -326,6 +335,15 @@ const TRANSLATIONS = {
     apt_analysis_roe_title: "Oman pääoman tuotto", apt_cash_on_cash: "Oman pääoman tuottoprosentti",
     apt_analysis_no_equity: "Lisää sijoittamasi oma pääoma Muokkaa asuntoa -näkymässä nähdäksesi oman pääoman tuottoprosentin.",
     apt_analysis_disclaimer: "Nämä ovat tavanomaisia sijoitustunnuslukuja, laskettu omista kirjatuista tiedoistasi ja antamistasi luvuista, ei veroneuvontaa tai arviolausunto, ja eri laskurit määrittelevät nettotuoton ja kassavirran hieman eri tavoin.",
+    apt_personal_loan_title: "Oma asuntolaina (lainasopimus), valinnainen",
+    apt_personal_loan_amount: "Nostettu lainamäärä, EUR", apt_personal_loan_start: "Nosto- tai sopimuspäivä",
+    apt_personal_loan_payment: "Kuukausierä (korko ja lyhennys), EUR", apt_personal_loan_rate: "Korko, % vuodessa",
+    apt_personal_loan_note: "Tämä on omaa asunnon ostoon otettua pankkilainaasi, eri asia kuin yllä oleva taloyhtiön lainaosuus. Lataa lainasopimus asiakirjakentän kautta ylhäällä, tai täytä tiedot käsin.",
+    apt_analysis_financing_title: "Oma rahoitus", apt_analysis_operating_net: "Operatiivinen nettotulos (ennen rahoitusta)",
+    apt_analysis_interest_this_year: "Korot tänä vuonna", apt_analysis_principal_this_year: "Lyhennys tänä vuonna",
+    apt_cash_flow_after_financing: "Kassavirta oman rahoituksen jälkeen", apt_personal_loan_remaining: "Arvioitu jäljellä oleva oma laina",
+    apt_analysis_financing_note: "Korot ja lyhennys on jaettu tavanomaisella tasapoistolaskennalla antamillasi lainaehdoilla, tämä voi ajan mittaan poiketa pankin omasta laskennasta, päivitä tiedot uudesta lainaerittelystä tarvittaessa.",
+    apt_analysis_no_personal_loan: "Lisää oman asuntolainasi tiedot Muokkaa asuntoa -näkymässä nähdäksesi kassavirran rahoituksen jälkeen.",
     tax_title: "Veroraportti", tax_all_separate: "Kaikki asunnot, erikseen",
     tax_export_csv: "Vie CSV", tax_download_pdf: "Lataa 7H-yhteenveto PDF", tax_building_pdf: "Luodaan PDF...",
     tax_get_blank_form: "Hae tyhjä 7H-lomake", tax_open_sheet: "Avaa Sheet",
@@ -646,8 +664,8 @@ async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
   const prompt =
     "You are extracting structured facts about a Finnish housing company apartment (asunto-osake) from an " +
     "isannoitsijantodistus (certificate from the property manager), a kauppakirja (purchase agreement), a " +
-    "lainaosuuslaskelma, or a similar official document. Return ONLY compact JSON, no markdown, no explanation, " +
-    "matching exactly this shape:\n" +
+    "lainaosuuslaskelma, a personal mortgage lainasopimus (loan agreement), or a similar official document. " +
+    "Return ONLY compact JSON, no markdown, no explanation, matching exactly this shape:\n" +
     '{"housingCompany":"<official name of the asunto-osakeyhtio, or empty string>",' +
     '"companyId":"<Y-tunnus in format 1234567-8, or empty string if not found>",' +
     '"unitNumber":"<huoneiston numero or tunnus, or empty string>",' +
@@ -657,8 +675,10 @@ async function extractApartmentInfoWithGemini(apiKey, base64, mimeType) {
     '"debtFreePrice":<velaton hinta, purchase price plus the apartment share of company loans at the time of purchase, in EUR, plain number, or null if not stated>,' +
     '"purchaseDate":"YYYY-MM-DD, the date of the kauppakirja, or empty string if not stated",' +
     '"acquisitionCosts":<varainsiirtovero and other one-off purchase costs in EUR, plain number, or null if not stated>,' +
-    '"loans":[{"name":"<loan name exactly as printed, for example RL3 OP-448/Ikkunat>","referenceBalance":<remaining lainaosuus in EUR for this specific apartment, plain number>,"referenceDate":"YYYY-MM-DD, the date this lainaosuus figure is valid as of","monthlyPayment":<the monthly rahoitusvastike euro amount tied to this loan for this apartment, plain number, or null if not stated>,"annualRatePercent":<the loan interest rate as a plain percent number, for example 5.45, or null if not stated>}]}\n' +
+    '"loans":[{"name":"<loan name exactly as printed, for example RL3 OP-448/Ikkunat>","referenceBalance":<remaining lainaosuus in EUR for this specific apartment, plain number>,"referenceDate":"YYYY-MM-DD, the date this lainaosuus figure is valid as of","monthlyPayment":<the monthly rahoitusvastike euro amount tied to this loan for this apartment, plain number, or null if not stated>,"annualRatePercent":<the loan interest rate as a plain percent number, for example 5.45, or null if not stated>}],' +
+    '"personalLoan":{"originalAmount":<the personal mortgage principal drawn down, in EUR, plain number, or null if not stated>,"startDate":"YYYY-MM-DD, the date the loan was drawn down or the agreement date, or empty string if not stated","monthlyPayment":<the monthly instalment (interest plus principal, tasaerä or annuiteetti) in EUR, plain number, or null if not stated>,"annualRatePercent":<the interest rate as a plain percent number, or null if not stated>}}\n' +
     'Only include a loan in "loans" if this specific apartment has a lainaosuus (loan share) listed for it, usually under a "Lainaosuudet" section tied to this huoneisto. Do not include company-wide loan totals that are not attributed to this apartment. Use an empty array if none are found. ' +
+    'Only fill "personalLoan" from a personal mortgage loan agreement (lainasopimus), not from the company loan share section, leave its fields null if no such document is present. ' +
     "Do not guess or invent values that are not explicitly stated in the document, use an empty string or null instead.";
   const body = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }] };
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`, {
@@ -701,6 +721,42 @@ function estimateLoanBalance(loan, asOfISO) {
     elapsed = months;
   }
   return { balance, monthsElapsed: elapsed };
+}
+
+/* Walks the same amortization schedule as estimateLoanBalance but returns the interest/principal
+   split for one specific calendar year, and the balance at the start and end of that year.
+   Used for the personal financing (oma rahoitus) section of the profitability analysis. */
+function annualDebtService(loan, year) {
+  const startDate = new Date(loan.referenceDate);
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31);
+  if (startDate > yearEnd) return { interest: 0, principal: 0, balanceStart: Number(loan.referenceBalance) || 0, balanceEnd: Number(loan.referenceBalance) || 0 };
+
+  let balance = Number(loan.referenceBalance) || 0;
+  const payment = Number(loan.monthlyPayment) || 0;
+  const rate = Number(loan.annualRatePercent) || 0;
+  const monthlyRate = rate / 100 / 12;
+  let interestThisYear = 0;
+  let principalThisYear = 0;
+  let balanceStart = balance;
+  let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  let guard = 0;
+  let capturedStart = startDate >= yearStart;
+  while (balance > 0 && cursor <= yearEnd && guard < 1200) {
+    guard++;
+    const inTargetYear = cursor.getFullYear() === year;
+    if (inTargetYear && cursor >= yearStart && !capturedStart) { balanceStart = balance; capturedStart = true; }
+    const interest = rate > 0 ? balance * monthlyRate : 0;
+    const principal = rate > 0 ? payment - interest : payment;
+    const actualPrincipal = Math.min(principal, balance);
+    if (inTargetYear) {
+      interestThisYear += interest;
+      principalThisYear += actualPrincipal;
+    }
+    balance = Math.max(0, balance - actualPrincipal);
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  return { interest: interestThisYear, principal: principalThisYear, balanceStart, balanceEnd: balance };
 }
 
 function computeApartmentYear(apartment, transactions, year) {
@@ -1210,6 +1266,7 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
       rahoitusvastikeTreatment: "income", erityisvastikeDescription: "", erityisvastikeTreatment: "income",
       notes: "", loans: [],
       purchasePrice: "", debtFreePrice: "", purchaseDate: "", acquisitionCosts: "", ownEquity: "",
+      personalLoanAmount: "", personalLoanStartDate: "", personalLoanPayment: "", personalLoanRate: "",
     }
   );
   const rvConfig = CONFIGURABLE_SECTION.rahoitusvastike;
@@ -1257,6 +1314,10 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         debtFreePrice: extracted.debtFreePrice != null ? String(extracted.debtFreePrice) : form.debtFreePrice,
         purchaseDate: extracted.purchaseDate || form.purchaseDate,
         acquisitionCosts: extracted.acquisitionCosts != null ? String(extracted.acquisitionCosts) : form.acquisitionCosts,
+        personalLoanAmount: extracted.personalLoan?.originalAmount != null ? String(extracted.personalLoan.originalAmount) : form.personalLoanAmount,
+        personalLoanStartDate: extracted.personalLoan?.startDate || form.personalLoanStartDate,
+        personalLoanPayment: extracted.personalLoan?.monthlyPayment != null ? String(extracted.personalLoan.monthlyPayment) : form.personalLoanPayment,
+        personalLoanRate: extracted.personalLoan?.annualRatePercent != null ? String(extracted.personalLoan.annualRatePercent) : form.personalLoanRate,
       });
     } catch (e) {
       setDocError((lang === "fi" ? "Asiakirjan lukeminen epäonnistui: " : "Could not read the document: ") + e.message);
@@ -1404,6 +1465,30 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
         </Field>
         <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_invest_note")}</div>
       </div>
+      <div className="mb-3">
+        <div className="text-xs mb-2" style={{ color: MUTE }}>{t("apt_personal_loan_title")}</div>
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          <Field label={t("apt_personal_loan_amount")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.personalLoanAmount || ""}
+              onChange={(e) => setForm({ ...form, personalLoanAmount: e.target.value })} />
+          </Field>
+          <Field label={t("apt_personal_loan_start")}>
+            <input type="date" className={inputCls} style={inputStyle} value={form.personalLoanStartDate || ""}
+              onChange={(e) => setForm({ ...form, personalLoanStartDate: e.target.value })} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-1 mb-1">
+          <Field label={t("apt_personal_loan_payment")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.personalLoanPayment || ""}
+              onChange={(e) => setForm({ ...form, personalLoanPayment: e.target.value })} />
+          </Field>
+          <Field label={t("apt_personal_loan_rate")}>
+            <input type="number" step="0.01" className={inputCls} style={inputStyle} value={form.personalLoanRate || ""}
+              onChange={(e) => setForm({ ...form, personalLoanRate: e.target.value })} />
+          </Field>
+        </div>
+        <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_personal_loan_note")}</div>
+      </div>
       <Field label={t("apt_field_notes")}>
         <textarea className={inputCls} style={{ ...inputStyle, minHeight: 60 }} value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -1412,6 +1497,8 @@ function ApartmentFormModal({ initial, onClose, onSave, t, lang, geminiApiKey, o
           ...form, sharePercent: Number(form.sharePercent) || 0,
           purchasePrice: Number(form.purchasePrice) || 0, debtFreePrice: Number(form.debtFreePrice) || 0,
           acquisitionCosts: Number(form.acquisitionCosts) || 0, ownEquity: Number(form.ownEquity) || 0,
+          personalLoanAmount: Number(form.personalLoanAmount) || 0, personalLoanPayment: Number(form.personalLoanPayment) || 0,
+          personalLoanRate: form.personalLoanRate ? Number(form.personalLoanRate) : null,
           loans: loans.map((l) => ({
             id: l.id, name: l.name, referenceDate: l.referenceDate,
             referenceBalance: Number(l.referenceBalance) || 0,
@@ -1657,6 +1744,15 @@ function RecurringModal({ apartments, templates, onClose, onUpdate, onDelete, t 
 function InvestmentAnalysisModal({ apartment, transactions, recurringTemplates, year, t, lang, onClose }) {
   const a = computeInvestmentAnalysis(apartment, transactions, recurringTemplates, year);
   const hasPriceInfo = a.debtFreePrice > 0;
+  const hasPersonalLoan = Number(apartment.personalLoanAmount) > 0 && apartment.personalLoanStartDate && Number(apartment.personalLoanPayment) > 0;
+  const debtService = hasPersonalLoan
+    ? annualDebtService(
+        { referenceDate: apartment.personalLoanStartDate, referenceBalance: apartment.personalLoanAmount, monthlyPayment: apartment.personalLoanPayment, annualRatePercent: apartment.personalLoanRate },
+        year
+      )
+    : null;
+  const operatingNet = a.r.incomeTotal - a.operatingCosts;
+  const cashFlowAfterFinancing = debtService ? operatingNet - debtService.interest - debtService.principal : null;
   return (
     <Modal onClose={onClose} title={`${t("apt_analysis_title")}: ${apartment.name}`}>
       <div className="text-xs mb-4" style={{ color: MUTE }}>{t("apt_analysis_intro", { year })}</div>
@@ -1692,6 +1788,26 @@ function InvestmentAnalysisModal({ apartment, transactions, recurringTemplates, 
         </div>
         <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_cash_flow_note")}</div>
       </div>
+
+      {hasPersonalLoan ? (
+        <div className="rounded border p-3 mb-3" style={{ borderColor: LINE }}>
+          <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTE }}>{t("apt_analysis_financing_title")}</div>
+          <RowLine label={t("apt_analysis_operating_net")} value={operatingNet} />
+          <RowLine label={t("apt_analysis_interest_this_year")} value={debtService.interest} negative />
+          <RowLine label={t("apt_analysis_principal_this_year")} value={debtService.principal} negative />
+          <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm" style={{ borderColor: LINE }}>
+            <span style={{ color: INK }}>{t("apt_cash_flow_after_financing")}</span>
+            <span className="font-mono font-semibold" style={{ color: cashFlowAfterFinancing >= 0 ? GREEN : RUST }}>{eur(cashFlowAfterFinancing)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm mt-1">
+            <span style={{ color: MUTE }}>{t("apt_personal_loan_remaining")}</span>
+            <span className="font-mono" style={{ color: MUTE }}>{eur(debtService.balanceEnd)}</span>
+          </div>
+          <div className="text-xs mt-1" style={{ color: MUTE }}>{t("apt_analysis_financing_note")}</div>
+        </div>
+      ) : (
+        <div className="text-xs mb-3" style={{ color: MUTE }}>{t("apt_analysis_no_personal_loan")}</div>
+      )}
 
       {a.ownEquity ? (
         <div className="rounded border p-3 mb-3" style={{ borderColor: LINE }}>
